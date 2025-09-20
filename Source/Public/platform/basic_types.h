@@ -16,6 +16,10 @@ using uint32 = edvar::platform_type::uint32;
 using int64 = edvar::platform_type::int64;
 using uint64 = edvar::platform_type::uint64;
 
+using char_utf8 = edvar::platform_type::char_utf8;
+using char_utf16 = edvar::platform_type::char_utf16;
+using char_utf32 = edvar::platform_type::char_utf32;
+
 
 
 using nullptr_t = decltype(nullptr);

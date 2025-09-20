@@ -3,6 +3,18 @@
 #include "memory/allocators.h"
 
 namespace edvar {
+template <typename storage_type> class array_view {
+public:
+    array_view() : _data(nullptr), _length(0) {}
+    array_view(storage_type* data, uint32 length) : _data(data), _length(length) {}
+    array_view(const array_view& other) : _data(other._data), _length(other._length) {}
+    uint32 length() const { return _length; }
+    const storage_type* data() const { return _data; }
+private:
+    storage_type* _data;
+    uint32 _length;
+};
+
 template <typename storage_type, typename allocator_type = memory::heap_allocator<storage_type>> class array {
 public:
     typedef value_or_error_code<int32> indexed_result;

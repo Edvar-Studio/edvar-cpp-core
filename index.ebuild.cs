@@ -16,5 +16,9 @@ class EdvarCppCore : ModuleBase
         this.Includes.Public.Add("Source/Public");
         this.Includes.Private.Add("Source/Private");
         this.ForceIncludes.Public.Add("Source/Private/force_include.h");
+
+
+        // Add ICU combined as a static library to this module
+        this.Dependencies.Public.Add("static:Thirdparty/icu/icu.ebuild.cs");
     }
 }

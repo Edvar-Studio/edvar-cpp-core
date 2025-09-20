@@ -14,7 +14,8 @@
 #endif
 #endif
 
+#include <initializer_list>       // IWYU pragma: export
 #include "platform/basic_types.h" // IWYU pragma: export
 #include "utils/value_or_error.h" // IWYU pragma: export
 #include "containers/array.h"     // IWYU pragma: export
-#include <initializer_list>       // IWYU pragma: export
+#include "containers/string.h"    // IWYU pragma: export

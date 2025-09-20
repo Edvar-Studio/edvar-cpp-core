@@ -1,14 +1,14 @@
 #pragma once
 #include "./array.h" // IWYU pragma: keep
+#include "platform/basic_types.h"
 #include "utils/value_or_error.h"
 
 namespace edvar {
 namespace c_string {
-uint32 string_length(const wchar_t* buffer);
-uint32 string_length(const char* buffer);
+uint32 string_length(const char_utf8* buffer);
 } // namespace c_string
 
-template <typename character_type = wchar_t> class string_view {
+template <typename character_type = char_utf16> class string_view {
 public:
     string_view() : _data(nullptr), _length(0) {}
     string_view(const character_type* str) : _data(str), _length(edvar::c_string::string_length(str)) {}
@@ -63,27 +63,55 @@ public:
         } while (latest.is_error());
         return return_arr;
     }
-    enum class is_equal_comparson_type : uint8 {
-        current_culture,
-        current_culture_ignore_case,
 
-        invariant_culture,
-        invariant_culture_ignore_case,
+    bool operator==(const character_type* other_string) const {
+        uint32 other_length = edvar::c_string::string_length(other_string);
+        if (other_length != _length) {
+            return false;
+        }
+        for (uint32 i = 0; i < _length; ++i) {
+            if (_data[i] != other_string[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 
-        ordinal,
-        ordinal_ignore_case
-    };
-    bool is_equal(const character_type* other_string,
-                  is_equal_comparson_type comparision_rule = is_equal_comparson_type::current_culture) {
-                    
-                  }
-
-    bool operator==(const character_type* other_string) const {}
+    bool operator==(const string_view& other) const {
+        if (other._length != _length) {
+            return false;
+        }
+        for (uint32 i = 0; i < _length; ++i) {
+            if (_data[i] != other._data[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 
 private:
     const character_type* _data;
     uint32 _length;
 };
 
-class string {};
+template <typename character_type = char_utf16> class string_template {
+public:
+    string_template();
+    ~string_template();
+
+    string_template(const character_type* str);
+    string_template(const character_type* str, uint32 length);
+    string_template(const string_template& other);
+    string_template(string_template&& other) noexcept;
+
+    template <typename other_character_type> void convert_string_type(const string_template<other_character_type>& other);
+
+private:
+    array<character_type> _data;
+};
+
+
+using string = string_template<char_utf16>;
+using string_utf8 = string_template<char_utf8>;
+
 } // namespace edvar
