@@ -19,8 +19,19 @@ public:
 
     bool is_value() const { return _state == VALUE; }
     bool is_error() const { return _state == ERROR; }
-    value_type get_value() const { return _value; }
-    error_type get_error() const { return _error; }
+    const value_type& get_value() const { return _value; }
+    const error_type& get_error() const { return _error; }
+    value_type& get_value(){return _value;}
+    error_type& get_error(){return _error;}
+    
+    value_type& value_or_default(value_type& default_value){
+        if (is_value()) return _value;
+        return default_value;
+    }
+    error_type& error_or_default(error_type& default_error){
+        if (is_error()) return _error;
+        return default_error;
+    }
 
     value_or_error& attach_value_without_state_change(const value_type& value) {
         _value = value;

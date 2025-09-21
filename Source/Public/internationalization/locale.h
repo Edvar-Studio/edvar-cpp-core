@@ -20,11 +20,11 @@ public:
     uint32 lcid() const;
     bool is_right_to_left() const;
 
-    edvar::string display_language(const locale* in_locale = nullptr) const;
-    edvar::string display_script(const locale* in_locale = nullptr) const;
-    edvar::string display_country(const locale* in_locale = nullptr) const;
-    edvar::string display_variant(const locale* in_locale = nullptr) const;
-    edvar::string display_name(const locale* in_locale = nullptr) const;
+    edvar::string_utf16 display_language(const locale* in_locale = nullptr) const;
+    edvar::string_utf16 display_script(const locale* in_locale = nullptr) const;
+    edvar::string_utf16 display_country(const locale* in_locale = nullptr) const;
+    edvar::string_utf16 display_variant(const locale* in_locale = nullptr) const;
+    edvar::string_utf16 display_name(const locale* in_locale = nullptr) const;
 
     bool is_valid() const;
 

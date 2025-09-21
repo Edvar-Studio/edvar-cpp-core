@@ -4,8 +4,19 @@
 #include "utils/value_or_error.h"
 
 namespace edvar {
+namespace internationalization {
+class locale;
+}
 namespace c_string {
-uint32 string_length(const char_utf8* buffer);
+template <typename character_type, typename = edvar::meta::enable_if<edvar::meta::is_character<character_type>>>
+inline uint32 string_length(const character_type* str) {
+    uint32 length = 0;
+    while (str[length] != 0) {
+        length++;
+    }
+    return length;
+}
+
 } // namespace c_string
 
 template <typename character_type = char_utf16> class string_view {
@@ -94,24 +105,29 @@ private:
     uint32 _length;
 };
 
-template <typename character_type = char_utf16> class string_template {
+template <typename character_type = char_utf16> class string_base {
 public:
-    string_template();
-    ~string_template();
+    string_base();
+    ~string_base();
 
-    string_template(const character_type* str);
-    string_template(const character_type* str, uint32 length);
-    string_template(const string_template& other);
-    string_template(string_template&& other) noexcept;
+    string_base(const character_type* str);
+    string_base(const character_type* str, uint32 length);
+    string_base(const string_base& other);
+    string_base(string_base&& other) noexcept;
 
-    template <typename other_character_type> void convert_string_type(const string_template<other_character_type>& other);
+    template <typename other_character_type>
+    inline void convert_string_type(const string_base<other_character_type>& other);
+    inline string_base& operator=(const string_base& other);
+    inline string_base& operator=(string_base&& other) noexcept;
+    inline bool operator==(const string_base& other) const;
+    bool operator!=(const string_base& other) const { return !operator==(other); }
 
 private:
     array<character_type> _data;
 };
 
-
-using string = string_template<char_utf16>;
-using string_utf8 = string_template<char_utf8>;
+using string_utf32 = string_base<char_utf32>;
+using string_utf16 = string_base<char_utf16>;
+using string = string_base<char_utf8>;
 
 } // namespace edvar

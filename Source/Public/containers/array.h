@@ -3,6 +3,11 @@
 #include "memory/allocators.h"
 
 namespace edvar {
+
+template <typename T>
+inline constexpr bool can_store_in_array =
+    edvar::meta::is_move_assignable<T> || edvar::meta::is_nothrow_move_assignable<T>;
+
 template <typename storage_type> class array_view {
 public:
     array_view() : _data(nullptr), _length(0) {}
@@ -10,12 +15,15 @@ public:
     array_view(const array_view& other) : _data(other._data), _length(other._length) {}
     uint32 length() const { return _length; }
     const storage_type* data() const { return _data; }
+
 private:
     storage_type* _data;
     uint32 _length;
 };
 
-template <typename storage_type, typename allocator_type = memory::heap_allocator<storage_type>> class array {
+template <typename storage_type, typename allocator_type = memory::heap_allocator<storage_type>,
+          typename = edvar::meta::enable_if<can_store_in_array<storage_type>>>
+class array {
 public:
     typedef value_or_error_code<int32> indexed_result;
 
@@ -29,6 +37,10 @@ public:
         other._capacity = 0;
     }
     ~array() {
+        // destroy constructed elements
+        for (uint32 i = 0; i < static_cast<uint32>(_size); ++i) {
+            _data[i].~storage_type();
+        }
         _allocator.deallocate(_data);
         _size = 0;
         _capacity = 0;
@@ -124,48 +136,132 @@ public:
     inline void append(storage_type* in_array, uint32 element_count) {
         ensure_capacity(_size + element_count);
         for (uint32 i = 0; i < element_count; ++i) {
-            add(in_array[i]);
+            new (&_data[_size]) storage_type(in_array[i]);
         }
+        _size += element_count;
     }
 
     inline const storage_type& operator[](int32 index) const { return _data[index]; }
 
     inline storage_type& operator[](int32 index) { return _data[index]; }
     int32 add(const storage_type& value) {
-        ensure_capacity(_size + 1);
-        _data[_size - 1] = value;
+        ensure_capacity(static_cast<uint32>(_size) + 1);
+        // placement-new copy-construct in place
+        new (&_data[_size]) storage_type(value);
+        ++_size;
         return _size - 1;
+    }
+    int32 add(storage_type&& value) {
+        ensure_capacity(static_cast<uint32>(_size) + 1);
+        // placement-new move-construct in place
+        new (&_data[_size]) storage_type(edvar::move(value));
+        ++_size;
+        return _size - 1;
+    }
+
+    // Emplace: construct directly in place with forwarded args
+    template <typename... Args> int32 emplace(Args&&... args) {
+        ensure_capacity(static_cast<uint32>(_size) + 1);
+        new (&_data[_size]) storage_type(edvar::forward<Args>(args)...);
+        ++_size;
+        return _size - 1;
+    }
+    void add_initialized(const int32 count) {
+        ensure_capacity(static_cast<uint32>(_size) + count);
+        for (int32 i = 0; i < count; ++i) {
+            new (&_data[_size + i]) storage_type();
+        }
+        _size += count;
+    }
+    void add_uninitialized(const int32 count) {
+        ensure_capacity(static_cast<uint32>(_size) + count);
+        // leave memory uninitialized, but increase size value to reflect reserved slots
+        _size += count;
     }
     void insert(int32 index, const storage_type& value) {
         edvar::container::utilities::check_bounds(0, _size, index);
-        ensure_capacity(_size + 1);
-        for (uint32 i = _size - 1; i > static_cast<uint32>(index); --i) {
-            _data[i] = _data[i - 1];
+        ensure_capacity(static_cast<uint32>(_size) + 1);
+        // make room: construct tail slot
+        new (&_data[_size]) storage_type(edvar::move(_data[_size - 1]));
+        // shift elements up; prefer noexcept move-assignment when available
+        for (uint32 i = static_cast<uint32>(_size) - 1; i > static_cast<uint32>(index); --i) {
+            if constexpr (edvar::meta::is_nothrow_move_assignable<storage_type>) {
+                _data[i] = edvar::move(_data[i - 1]);
+            } else {
+                new (&_data[i]) storage_type(edvar::move(_data[i - 1]));
+                _data[i - 1].~storage_type();
+            }
         }
-        _data[index] = value;
+        if constexpr (edvar::meta::is_nothrow_move_assignable<storage_type>) {
+            _data[index] = value;
+        } else {
+            new (&_data[index]) storage_type(value);
+        }
+        ++_size;
+    }
+    void remove_at(int32 index) {
+        edvar::container::utilities::check_bounds(0, _size - 1, index);
+        uint32 uindex = static_cast<uint32>(index);
+        // destroy the element and shift subsequent elements down; prefer move-assignment
+        _data[uindex].~storage_type();
+        for (uint32 i = uindex; i < static_cast<uint32>(_size) - 1; ++i) {
+            if constexpr (edvar::meta::is_nothrow_move_assignable<storage_type>) {
+                _data[i] = edvar::move(_data[i + 1]);
+                _data[i + 1].~storage_type();
+            } else {
+                new (&_data[i]) storage_type(edvar::move(_data[i + 1]));
+                _data[i + 1].~storage_type();
+            }
+        }
+        --_size;
+    }
+    // Remove element and return it by value (move out before shifting)
+    storage_type remove_at_ref(int32 index) {
+        edvar::container::utilities::check_bounds(0, _size - 1, index);
+        uint32 uindex = static_cast<uint32>(index);
+        storage_type removed = edvar::move(_data[uindex]);
+        // destroy source and shift remaining
+        _data[uindex].~storage_type();
+        for (uint32 i = uindex; i < static_cast<uint32>(_size) - 1; ++i) {
+            if constexpr (edvar::meta::is_nothrow_move_assignable<storage_type>) {
+                _data[i] = edvar::move(_data[i + 1]);
+                _data[i + 1].~storage_type();
+            } else {
+                new (&_data[i]) storage_type(edvar::move(_data[i + 1]));
+                _data[i + 1].~storage_type();
+            }
+        }
+        --_size;
+        return removed;
     }
     void ensure_capacity(uint32 new_size) {
-        if (new_size > _capacity) {
-            uint32 new_capacity = _capacity == 0 ? 1 : _capacity;
+        if (new_size > static_cast<uint32>(_capacity)) {
+            uint32 new_capacity = _capacity == 0 ? 1u : static_cast<uint32>(_capacity);
             while (new_capacity < new_size) {
-                new_capacity *= 2;
+                new_capacity *= 2u;
             }
             storage_type* new_data = _allocator.allocate(new_capacity);
-            for (uint32 i = 0; i < _size; ++i) {
-                new_data[i] = _data[i];
+            // Move-construct into new storage using placement-new with exception safety
+            // Move-construct into new storage using placement-new
+            for (uint32 i = 0; i < static_cast<uint32>(_size); ++i) {
+                new (&new_data[i]) storage_type(edvar::move(_data[i]));
             }
+            // destroy old elements
+            for (uint32 i = 0; i < static_cast<uint32>(_size); ++i)
+                _data[i].~storage_type();
             _allocator.deallocate(_data);
             _data = new_data;
-            _capacity = new_capacity;
-            _size = new_size;
+            _capacity = static_cast<int32>(new_capacity);
         }
     }
     void shrink() {
         if (_size < _capacity) {
-            storage_type* new_data = _allocator.allocate(_size);
-            for (uint32 i = 0; i < _size; ++i) {
-                new_data[i] = _data[i];
+            storage_type* new_data = _allocator.allocate(static_cast<uint32>(_size));
+            for (uint32 i = 0; i < static_cast<uint32>(_size); ++i) {
+                new (&new_data[i]) storage_type(edvar::move(_data[i]));
             }
+            for (uint32 i = 0; i < static_cast<uint32>(_size); ++i)
+                _data[i].~storage_type();
             _allocator.deallocate(_data);
             _data = new_data;
             _capacity = _size;

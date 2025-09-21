@@ -1,4 +1,5 @@
 #include "internationalization/locale.h"
+#include "containers/string.h"
 #define U_HIDE_DEPRECATED_API
 #define U_HIDE_INTERNAL_API
 #include <unicode/unistr.h>
@@ -17,52 +18,34 @@ static struct _locale_initializer {
             locale::register_from_icu_locale(&element);
         }
     }
-} _locale_init_instance;
+} _locale_initializer_instance;
 
-const char* locale::language() const{
-    return static_cast<const icu::Locale*>(_icu_locale_data)->getLanguage();
-}
+const char* locale::language() const { return static_cast<const icu::Locale*>(_icu_locale_data)->getLanguage(); }
 
-const char* locale::script() const {
-    return static_cast<const icu::Locale*>(_icu_locale_data)->getScript();
-}
-const char* locale::country() const {
-    return static_cast<const icu::Locale*>(_icu_locale_data)->getCountry();
-}
-const char* locale::variant() const {
-    return static_cast<const icu::Locale*>(_icu_locale_data)->getVariant();
-}
-const char* locale::name() const {
-    return static_cast<const icu::Locale*>(_icu_locale_data)->getName();
-}
+const char* locale::script() const { return static_cast<const icu::Locale*>(_icu_locale_data)->getScript(); }
+const char* locale::country() const { return static_cast<const icu::Locale*>(_icu_locale_data)->getCountry(); }
+const char* locale::variant() const { return static_cast<const icu::Locale*>(_icu_locale_data)->getVariant(); }
+const char* locale::name() const { return static_cast<const icu::Locale*>(_icu_locale_data)->getName(); }
 const char* locale::language_iso3() const {
     return static_cast<const icu::Locale*>(_icu_locale_data)->getISO3Language();
 }
-const char* locale::country_iso3() const {
-    return static_cast<const icu::Locale*>(_icu_locale_data)->getISO3Country();
-}
-uint32 locale::lcid() const {
-    return static_cast<const icu::Locale*>(_icu_locale_data)->getLCID();
-}
-bool locale::is_right_to_left() const {
-    return static_cast<const icu::Locale*>(_icu_locale_data)->isRightToLeft();
-}
+const char* locale::country_iso3() const { return static_cast<const icu::Locale*>(_icu_locale_data)->getISO3Country(); }
+uint32 locale::lcid() const { return static_cast<const icu::Locale*>(_icu_locale_data)->getLCID(); }
+bool locale::is_right_to_left() const { return static_cast<const icu::Locale*>(_icu_locale_data)->isRightToLeft(); }
 bool locale::is_valid() const {
     return _icu_locale_data != nullptr && !static_cast<const icu::Locale*>(_icu_locale_data)->isBogus();
 }
-edvar::string locale::display_language(const locale* in_locale) const {
+edvar::string_utf16 locale::display_language(const locale* in_locale) const {
     icu::UnicodeString result;
     if (in_locale) {
         result = static_cast<const icu::Locale*>(_icu_locale_data)
-                     ->getDisplayLanguage(*static_cast<const icu::Locale*>(in_locale->_icu_locale_data),
-                                         result);
+                     ->getDisplayLanguage(*static_cast<const icu::Locale*>(in_locale->_icu_locale_data), result);
     } else {
         result = static_cast<const icu::Locale*>(_icu_locale_data)->getDisplayLanguage(result);
     }
-    edvar::string return_value(result.getBuffer(), result.length());
+    edvar::string_utf16 return_value(result.getBuffer(), result.length());
     return return_value;
 }
-
 
 locale::~locale() { delete static_cast<const icu::Locale*>(_icu_locale_data); }
 
