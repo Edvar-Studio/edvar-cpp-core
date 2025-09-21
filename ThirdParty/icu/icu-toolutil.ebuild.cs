@@ -26,6 +26,12 @@ public class IcuToolUtil : ModuleBase
             Definitions.Private.Add("_CRT_SECURE_NO_WARNINGS");
             Definitions.Private.Add("_CRT_SECURE_NO_DEPRECATE");
         }
+        else if (context.Platform.Name == "unix")
+        {
+            //TODO: add real tests so the U_HAVE_ELF_H is correctly set.
+            Definitions.Private.Add("U_HAVE_ELF_H=1");
+            Definitions.Private.Add("U_PLATFORM_IS_LINUX_BASED=1");
+        }
         var toolutilSources = File.ReadAllLines(Path.Join(sourceBase, "sources.txt"));
         SourceFiles.AddRange(toolutilSources.Select(line => Path.Join(sourceBase, line.Trim())).Where(File.Exists));
 

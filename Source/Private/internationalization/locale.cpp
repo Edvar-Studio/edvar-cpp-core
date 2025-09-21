@@ -1,5 +1,3 @@
-#pragma once
-
 #include "internationalization/locale.h"
 #define U_HIDE_DEPRECATED_API
 #define U_HIDE_INTERNAL_API

@@ -37,7 +37,7 @@ public:
     inline int32 length() const { return _size; }
     inline int32 capacity() const { return _capacity; }
     inline indexed_result find(const storage_type& value) const {
-        for (size_t i = 0; i < _size; ++i) {
+        for (uint32 i = 0; i < _size; ++i) {
             if (_data[i] == value) {
                 return indexed_result::from_value(static_cast<int32>(i));
             }
@@ -45,7 +45,7 @@ public:
         return indexed_result::from_error(-1).attach_value_without_state_change(-1);
     }
     template <typename predicate_type> inline indexed_result find(predicate_type predicate) const {
-        for (size_t i = 0; i < _size; ++i) {
+        for (uint32 i = 0; i < _size; ++i) {
             if (predicate(_data[i])) {
                 return indexed_result::from_value(static_cast<int32>(i));
             }
@@ -139,19 +139,19 @@ public:
     void insert(int32 index, const storage_type& value) {
         edvar::container::utilities::check_bounds(0, _size, index);
         ensure_capacity(_size + 1);
-        for (size_t i = _size - 1; i > static_cast<size_t>(index); --i) {
+        for (uint32 i = _size - 1; i > static_cast<uint32>(index); --i) {
             _data[i] = _data[i - 1];
         }
         _data[index] = value;
     }
-    void ensure_capacity(size_t new_size) {
+    void ensure_capacity(uint32 new_size) {
         if (new_size > _capacity) {
-            size_t new_capacity = _capacity == 0 ? 1 : _capacity;
+            uint32 new_capacity = _capacity == 0 ? 1 : _capacity;
             while (new_capacity < new_size) {
                 new_capacity *= 2;
             }
             storage_type* new_data = _allocator.allocate(new_capacity);
-            for (size_t i = 0; i < _size; ++i) {
+            for (uint32 i = 0; i < _size; ++i) {
                 new_data[i] = _data[i];
             }
             _allocator.deallocate(_data);
@@ -163,7 +163,7 @@ public:
     void shrink() {
         if (_size < _capacity) {
             storage_type* new_data = _allocator.allocate(_size);
-            for (size_t i = 0; i < _size; ++i) {
+            for (uint32 i = 0; i < _size; ++i) {
                 new_data[i] = _data[i];
             }
             _allocator.deallocate(_data);

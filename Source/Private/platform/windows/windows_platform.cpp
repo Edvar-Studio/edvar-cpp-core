@@ -1,6 +1,6 @@
 #include "platform/windows/windows_platform.h"
-#include "winbase.h"
 #ifdef _WIN32
+#include "winbase.h"
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 namespace edvar::platform_types {

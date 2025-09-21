@@ -16,6 +16,7 @@ public class IcuI18N : ModuleBase
         this.UseVariants = false;
         this.CppStandard = CppStandards.Cpp17;
         Includes.Private.Add("source/icu/source/common");
+        Includes.Private.Add("source/icu/source/i18n");
 
         var sourceBase = Path.Join(context.ModuleDirectory.FullName, "source", "icu", "source", "i18n");
 

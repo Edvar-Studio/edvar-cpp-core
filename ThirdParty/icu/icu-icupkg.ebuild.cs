@@ -15,15 +15,18 @@ public class IcuPkg : ModuleBase
         var sourceBase = Path.Join(context.ModuleDirectory.FullName, "source", "icu", "source", "tools", "icupkg");
 
         Includes.Private.Add("source/icu/source/common");
-        Dependencies.Private.Add("static:icu-common");
-
         Includes.Private.Add("source/icu/source/tools/toolutil");
+
+        // ordering of these is important
         Dependencies.Private.Add("static:icu-toolutil");
-
-
         Dependencies.Private.Add("static:icu-i18n");
+        Dependencies.Private.Add("static:icu-common");
         Dependencies.Private.Add("static:icu-stubdata");
 
+
+
+
+        Definitions.Private.Add("U_STATIC_IMPLEMENTATION");
         if (context.Platform.Name == "windows")
         {
             Definitions.Private.Add("_CRT_SECURE_NO_WARNINGS");

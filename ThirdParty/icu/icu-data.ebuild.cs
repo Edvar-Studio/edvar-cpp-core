@@ -4,11 +4,54 @@ using System.ComponentModel;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 using ebuild.api;
 
 
 public class IcuData : ModuleBase
 {
+    Process RunAndWait(string name, ProcessStartInfo psi)
+    {
+        return RunAndWait(name, psi, out _, out _);
+    }
+    Process RunAndWait(string name, ProcessStartInfo psi, out string standardOut)
+    {
+        return RunAndWait(name, psi, out standardOut, out _);
+    }
+
+    Process RunAndWait(string name, ProcessStartInfo psi, out string standardOut, out string standardError)
+    {
+        var process = Process.Start(psi) ?? throw new Exception($"Failed to start process {psi.FileName} {psi.Arguments}.");
+        var _out = string.Empty;
+        var _err = string.Empty;
+        process.OutputDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+            {
+                _out += e.Data + Environment.NewLine;
+                Console.WriteLine($"[{name}] info: {e.Data}");
+            }
+        };
+        process.ErrorDataReceived += (sender, e) =>
+        {
+            if (e.Data != null)
+            {
+                _err += e.Data + Environment.NewLine;
+                Console.Error.WriteLine($"[{name}] error: {e.Data}");
+            }
+        };
+        process.BeginErrorReadLine();
+        process.BeginOutputReadLine();
+        process.WaitForExit();
+        standardOut = _out;
+        standardError = _err;
+        if (process.ExitCode != 0)
+        {
+            throw new Exception($"[{name}] Process failed with exit code {process.ExitCode}. Error: {standardError}");
+        }
+        return process;
+    }
+
     public enum DataPackageType
     {
         Common,
@@ -48,22 +91,18 @@ public class IcuData : ModuleBase
                 UseShellExecute = false,
                 CreateNoWindow = true,
             };
-            var process = System.Diagnostics.Process.Start(processStartArgs) ?? throw new Exception("Failed to start ebuild process for icu-icupkg.");
-            var output = process.StandardOutput.ReadToEnd();
-            Console.WriteLine(output);
-            process.WaitForExit();
+            var process = RunAndWait("compileIcuPkg", processStartArgs);
             if (process.ExitCode != 0)
             {
-                var errorOutput = process.StandardError.ReadToEnd();
-                throw new Exception($"Ebuild process for icu-icupkg failed with exit code {process.ExitCode}. Error: {errorOutput}");
+                throw new Exception($"Ebuild process for icu-icupkg failed with exit code {process.ExitCode}.");
             }
         }
         else
         {
             Console.WriteLine("icupkg already built, skipping build.");
         }
-        // unpack data if not already unpacked
-        if (!Directory.Exists(Path.Join(context.ModuleDirectory.FullName, "temp", "pack_contents")))
+        // unpack data if not already unpacked and list file output is not there..
+        if (!Directory.Exists(Path.Join(context.ModuleDirectory.FullName, "temp", "pack_contents")) || !File.Exists(Path.Join(context.ModuleDirectory.FullName, "temp", "pack_contents.lst")))
         {
             Console.WriteLine("Unpacking icu data package for processing.");
             Directory.CreateDirectory(Path.Join(context.ModuleDirectory.FullName, "temp", "pack_contents"));
@@ -79,31 +118,24 @@ public class IcuData : ModuleBase
             };
             string[] argumentList = [
                     "-d",
-                    "temp/pack_contents",
+                    Path.Join(context.ModuleDirectory.FullName, "temp", "pack_contents"),
                     "-x",
                     "*",
                     "-l",
-                    $"data/{(BitConverter.IsLittleEndian ? "little" : "big")}/icudt77{(BitConverter.IsLittleEndian ? "l" : "b")}.dat"
+                    Path.Join(context.ModuleDirectory.FullName, "data", $"{(BitConverter.IsLittleEndian ? "little" : "big")}", $"icudt77{(BitConverter.IsLittleEndian ? "l" : "b")}.dat")
                 ];
             foreach (var arg in argumentList)
             {
                 processStartArgs.ArgumentList.Add(arg);
             }
-            var process = System.Diagnostics.Process.Start(processStartArgs) ?? throw new Exception("Failed to start icupkg process for unpacking data.");
-            var output = process.StandardOutput.ReadToEnd(); // read output to prevent deadlock and capture it for printing the list to the temp/pack_contents.lst
-            process.WaitForExit();
-            if (process.ExitCode != 0)
-            {
-                var errorOutput = process.StandardError.ReadToEnd();
-                throw new Exception($"icupkg process for unpacking data failed with exit code {process.ExitCode}. Error: {errorOutput}");
-            }
-            else
+            var process = RunAndWait("icupkg", processStartArgs, out var standardOut, out var standardError);
+            if (process.ExitCode == 0)
             {
                 Console.WriteLine("Unpacking icu data package completed successfully.");
             }
 
             Console.WriteLine("writing pack_contents.lst");
-            File.WriteAllText(Path.Join(context.ModuleDirectory.FullName, "temp", "pack_contents.lst"), output);
+            File.WriteAllText(Path.Join(context.ModuleDirectory.FullName, "temp", "pack_contents.lst"), standardOut);
         }
         else
         {
@@ -125,15 +157,7 @@ public class IcuData : ModuleBase
                 StandardErrorEncoding = System.Text.Encoding.UTF8,
                 StandardOutputEncoding = System.Text.Encoding.UTF8,
             };
-            var process = System.Diagnostics.Process.Start(processStartArgs) ?? throw new Exception("Failed to start ebuild process for icu-pkgdata.");
-            var output = process.StandardOutput.ReadToEnd();
-            Console.WriteLine(output);
-            process.WaitForExit();
-            if (process.ExitCode != 0)
-            {
-                var errorOutput = process.StandardError.ReadToEnd();
-                throw new Exception($"Ebuild process for icu-pkgdata failed with exit code {process.ExitCode}. Error: {errorOutput}");
-            }
+            var process = RunAndWait("compilePkgData", processStartArgs);
         }
         else
         {
@@ -167,13 +191,13 @@ public class IcuData : ModuleBase
                 },
                 "-v",
                 "-d",
-                Path.Join(context.ModuleDirectory.FullName, "Binaries","icudt"),
+                Path.Join(context.ModuleDirectory.FullName, "Binaries","icudt", "default"),
                 "-s",
                 Path.Join(context.ModuleDirectory.FullName, "temp", "pack_contents"),
                 "-p",
                 "icudt77",
                 "-T",
-                "temp/packaging_temp",
+                Path.Join(context.ModuleDirectory.FullName, "temp", "packaging_temp"),
                 "-L",
                 "icudt77",
             ];
@@ -199,17 +223,8 @@ public class IcuData : ModuleBase
             processStartArgs.Environment["PATH"] = targetPath + ";" + (Environment.GetEnvironmentVariable("PATH") ?? string.Empty);
             Console.WriteLine("Using PATH: " + processStartArgs.Environment["PATH"]);
 
-            var process = System.Diagnostics.Process.Start(processStartArgs) ?? throw new Exception("Failed to start pkgdata process for packaging data.");
-            var output = process.StandardOutput.ReadToEnd(); // read output to prevent deadlock and capture it for printing the list to the temp/pack_contents.lst
-            var errorOutput = process.StandardError.ReadToEnd();
-            process.WaitForExit();
-            Console.WriteLine(output);
-            Console.WriteLine(errorOutput);
-            if (process.ExitCode != 0)
-            {
-                throw new Exception($"pkgdata process for packaging data failed with exit code {process.ExitCode}. Error: {errorOutput}");
-            }
-            else
+            var process = RunAndWait("pkgdata", processStartArgs);
+            if (process.ExitCode == 0)
             {
                 Console.WriteLine("Packaging icu data library completed successfully.");
             }
@@ -236,9 +251,15 @@ public class IcuData : ModuleBase
 
         if (PackageType == DataPackageType.Shared || PackageType == DataPackageType.Static)
         {
-            Libraries.Public.Add(Path.Join(context.ModuleDirectory.FullName, "Binaries", "icudt", "default", "icudt77" + context.Platform.ExtensionForStaticLibrary));
+            if (context.Platform.Name == "windows")
+            {
+                Libraries.Public.Add(Path.Join(context.ModuleDirectory.FullName, "Binaries", "icudt", "default", "icudt77" + context.Platform.ExtensionForStaticLibrary));
+            }
+            else if (context.Platform.Name == "unix")
+            {
+                Libraries.Public.Add(Path.Join(context.ModuleDirectory.FullName, "Binaries", "icudt", "default", "libicudt77" + context.Platform.ExtensionForStaticLibrary));
+            }
         }
-
 
     }
 }

@@ -18,15 +18,21 @@ public class IcuPkgData : ModuleBase
             Definitions.Private.Add("_CRT_SECURE_NO_WARNINGS");
             Definitions.Private.Add("_CRT_SECURE_NO_DEPRECATE");
         }
+        else if (context.Platform.Name == "unix")
+        {
+            //TODO: add real tests so the U_HAVE_ELF_H is correctly set.
+            Definitions.Private.Add("U_HAVE_ELF_H=1");
+            Definitions.Private.Add("U_PLATFORM_IS_LINUX_BASED=1");
+        }
         Includes.Private.Add("source/icu/source/common");
         Includes.Private.Add("source/icu/source/tools/toolutil");
         Includes.Private.Add("source/icu/source/tools/pkgdata");
 
 
-        Dependencies.Private.Add("static:icu-common");
         Dependencies.Private.Add("static:icu-toolutil");
-        Dependencies.Private.Add("static:icu-stubdata");
         Dependencies.Private.Add("static:icu-i18n");
+        Dependencies.Private.Add("static:icu-common");
+        Dependencies.Private.Add("static:icu-stubdata");
 
         var sourceBase = Path.Join(context.ModuleDirectory.FullName, "source", "icu", "source", "tools", "pkgdata");
 
