@@ -27,7 +27,7 @@ public:
     // Insert or update. Returns true if inserted, false if updated existing.
     bool insert(const Key& key, const Value& value) {
         ensure_buckets(1);
-        uint64 h = get_hash(key);
+        uint64 h = hash(key);
         uint32 b = bucket_index_for_hash(h);
         auto& bucket = _buckets[b];
         for (int32 i = 0; i < bucket.length(); ++i) {
@@ -199,6 +199,23 @@ public:
         }
         return true;
     }
+    bool operator!=(const map& other) const { return !(*this == other); }
+    map& operator=(const map& other) noexcept {
+        if (this != &other) {
+            _buckets = other._buckets;
+            _count = other._count;
+        }
+        return *this;
+    }
+    map& operator=(map&& other) noexcept {
+        if (this != &other) {
+            _buckets = edvar::move(other._buckets);
+            _count = other._count;
+            other._count = 0;
+            other._buckets = array<array<entry>>();
+        }
+        return *this;
+    }
 
 private:
     array<array<entry>> _buckets;
@@ -216,27 +233,6 @@ private:
         v |= v >> 16;
         ++v;
         return v;
-    }
-
-    // Hash helpers: specializations for common types for speed; fallback uses FNV-1a over bytes.
-    static uint64 get_hash(const uint32& v) { return static_cast<uint64>(v); }
-    static uint64 get_hash(const int32& v) { return static_cast<uint64>(v); }
-    static uint64 get_hash(const uint64& v) { return v; }
-    static uint64 get_hash(const int64& v) { return static_cast<uint64>(v); }
-    static uint64 get_hash(const char& v) { return static_cast<uint64>(v); }
-    static uint64 get_hash(const wchar_t& v) { return static_cast<uint64>(v); }
-    static uint64 get_hash(const char_utf8& v) { return static_cast<uint64>(v); }
-    static uint64 get_hash(const char_utf16& v) { return static_cast<uint64>(v); }
-    static uint64 get_hash(const char_utf32& v) { return static_cast<uint64>(v); }
-    template <typename U> static uint64 get_hash(U* p) { return reinterpret_cast<uint64>(p); }
-    template <typename T> static uint64 get_hash(const T& v) {
-        const unsigned char* bytes = reinterpret_cast<const unsigned char*>(&v);
-        uint64 h = FNV_OFFSET_BASIS;
-        for (size_t i = 0; i < sizeof(T); ++i) {
-            h ^= bytes[i];
-            h *= FNV_PRIME;
-        }
-        return h;
     }
 
     // Use bitmask if bucket count is power-of-two

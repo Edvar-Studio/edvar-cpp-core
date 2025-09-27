@@ -88,4 +88,38 @@ private:
     storage_type* _ptr;
 };
 
+template <typename storage_type> class unique_pointer {
+public:
+    unique_pointer() : _ptr(nullptr) {}
+    unique_pointer(nullptr_t) : unique_pointer() {}
+    explicit unique_pointer(storage_type* ptr) : _ptr(ptr) {}
+    unique_pointer(const unique_pointer& other) = delete; // non-copyable
+    unique_pointer(unique_pointer&& other) noexcept : _ptr(other._ptr) { other._ptr = nullptr; }
+    ~unique_pointer() {
+        delete _ptr;
+        _ptr = nullptr;
+    }
+    unique_pointer& operator=(const unique_pointer& other) = delete; // non-copyable
+    unique_pointer& operator=(unique_pointer&& other) noexcept {
+        if (this != &other) {
+            delete _ptr;
+            _ptr = other._ptr;
+            other._ptr = nullptr;
+        }
+        return *this;
+    }
+    storage_type& operator*() const { return *_ptr; }
+    storage_type* operator->() const { return _ptr; }
+    void reset() {
+        delete _ptr;
+        _ptr = nullptr;
+    }
+    bool is_valid() const { return _ptr != nullptr; }
+    operator bool() const { return is_valid(); }
+    storage_type* get() const { return _ptr; }
+
+private:
+    storage_type* _ptr;
+};
+
 } // namespace edvar::memory

@@ -2,6 +2,7 @@
 #include "containers/container_utilities.h"
 #include "memory/allocators.h"
 
+
 namespace edvar {
 
 template <typename T>
@@ -25,6 +26,8 @@ template <typename storage_type, typename allocator_type = memory::heap_allocato
           typename = edvar::meta::enable_if<can_store_in_array<storage_type>>>
 class array {
 public:
+    static_assert(can_store_in_array<storage_type>,
+                  "Type cannot be stored in edvar::array as it is not move-assignable or nothrow move-assignable");
     typedef value_or_error_code<int32> indexed_result;
 
     array() : _data(nullptr), _size(0), _capacity(0) {}
@@ -36,18 +39,13 @@ public:
         other._size = 0;
         other._capacity = 0;
     }
-    ~array() {
-        // destroy constructed elements
-        for (uint32 i = 0; i < static_cast<uint32>(_size); ++i) {
-            _data[i].~storage_type();
-        }
-        _allocator.deallocate(_data);
-        _size = 0;
-        _capacity = 0;
-    }
+    ~array() { empty(); }
 
     inline int32 length() const { return _size; }
     inline int32 capacity() const { return _capacity; }
+    inline storage_type* data() { return _data; }
+    inline const storage_type* data() const { return _data; }
+    inline bool is_empty() const { return _size == 0; }
     inline indexed_result find(const storage_type& value) const {
         for (uint32 i = 0; i < _size; ++i) {
             if (_data[i] == value) {
@@ -123,6 +121,20 @@ public:
         }
         return true;
     }
+    inline void empty(uint32 new_capacity = 0) {
+        // destroy existing elements
+        for (uint32 i = 0; i < static_cast<uint32>(_size); ++i) {
+            _data[i].~storage_type();
+        }
+        _allocator.deallocate(_data);
+        _data = nullptr;
+        _size = 0;
+        _capacity = 0;
+        if (new_capacity > 0) {
+            ensure_capacity(new_capacity);
+        }
+    }
+
     inline void append(const std::initializer_list<storage_type>& init_list) {
         ensure_capacity(_size + init_list.size());
         for (const auto& element : init_list) {
@@ -266,6 +278,26 @@ public:
             _data = new_data;
             _capacity = _size;
         }
+    }
+
+    array& operator=(const array& other) {
+        if (this != &other) {
+            empty(other._size);
+            append(other);
+        }
+        return *this;
+    }
+    array& operator=(array&& other) noexcept {
+        if (this != &other) {
+            empty(other._capacity);
+            _data = edvar::move(other._data);
+            _size = edvar::move(other._size);
+            _allocator = edvar::move(other._allocator);
+            other._data = nullptr;
+            other._size = 0;
+            other._capacity = 0;
+        }
+        return *this;
     }
 
 private:

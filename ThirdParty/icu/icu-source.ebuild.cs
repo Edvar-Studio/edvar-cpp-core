@@ -42,6 +42,12 @@ public class IcuSource : ModuleBase
                 var destFile = Path.Join(includeDir, Path.GetFileName(file));
                 File.Copy(file, destFile, true);
             }
+            copyFromDir = Path.Join(context.ModuleDirectory.FullName, "source", "icu", "source", "i18n", "unicode");
+            foreach (var file in Directory.GetFiles(copyFromDir, "*.h"))
+            {
+                var destFile = Path.Join(includeDir, Path.GetFileName(file));
+                File.Copy(file, destFile, true);
+            }
         }
     }
 }

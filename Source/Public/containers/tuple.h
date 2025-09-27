@@ -14,7 +14,6 @@ template <uint32 index> struct tuple_impl<index> {};
 template <uint32 i, typename head, typename... tail>
 struct tuple_impl<i, head, tail...> : tuple_leaf<i, head>, tuple_impl<i + 1, tail...> {
     using tuple_leaf<i, head>::value;
-    using tuple_impl<i + 1, tail...>::get;
     template <uint32 j> auto& get() {
         if constexpr (i == j) {
             return value;

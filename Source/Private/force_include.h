@@ -14,6 +14,13 @@
 #endif
 #endif
 
+// forward declarations
+namespace edvar {
+namespace internationalization {
+class locale;
+}
+} // namespace edvar
+#include <new>                     // IWYU pragma: export
 #include <initializer_list>        // IWYU pragma: export
 #include "platform/basic_types.h"  // IWYU pragma: export
 #include "utils/value_or_error.h"  // IWYU pragma: export
