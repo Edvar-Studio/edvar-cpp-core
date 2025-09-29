@@ -5,6 +5,12 @@
 #include "platform/linux/linux_platform.h"     // IWYU pragma: keep
 #include "platform/windows/windows_platform.h" // IWYU pragma: keep
 
+#ifdef _MSVC_LANG
+#    define NOOP __noop()
+#else
+#    define NOOP (void)0
+#endif
+
 namespace edvar {
 
 platform_base& platform_base::get() {
@@ -24,4 +30,6 @@ void platform_base::on_fatal(const wchar_t* message) {
     fflush(stderr);
     exit(-1);
 }
+
+void platform_base::get_stack_trace(int skip_count, int count) { NOOP; }
 } // namespace edvar
