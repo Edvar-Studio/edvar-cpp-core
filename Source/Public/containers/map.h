@@ -2,6 +2,12 @@
 
 namespace edvar {
 
+namespace container {
+namespace iterator {
+template <typename MapType, bool IsConst> class map_iterator;
+}
+} // namespace container
+
 // Configuration constants (avoid magic numbers)
 static constexpr uint32 DEFAULT_INITIAL_BUCKET_COUNT = 16u;
 static constexpr uint32 MIN_BUCKET_COUNT = 1u;
@@ -27,7 +33,7 @@ public:
     // Insert or update. Returns true if inserted, false if updated existing.
     bool insert(const Key& key, const Value& value) {
         ensure_buckets(1);
-        uint64 h = hash(key);
+        uint64 h = get_hash_of_element<Key>(key);
         uint32 b = bucket_index_for_hash(h);
         auto& bucket = _buckets[b];
         for (int32 i = 0; i < bucket.length(); ++i) {
@@ -54,7 +60,7 @@ public:
     // rvalue overload: move key and value into the map
     bool insert(Key&& key, Value&& value) {
         ensure_buckets(1);
-        uint64 h = get_hash(key);
+        uint64 h = get_hash_of_element<Key>(key);
         uint32 b = bucket_index_for_hash(h);
         auto& bucket = _buckets[b];
         for (int32 i = 0; i < bucket.length(); ++i) {
@@ -81,7 +87,7 @@ public:
     edvar::value_or_error<Value, int32> try_get(const Key& key) const {
         if (_buckets.length() == 0)
             return edvar::value_or_error<Value, int32>::from_error(-1);
-        uint64 h = get_hash(key);
+        uint64 h = get_hash_of_element<Key>(key);
         uint32 b = bucket_index_for_hash(h);
         const auto& bucket = _buckets[b];
         for (int32 i = 0; i < bucket.length(); ++i) {
@@ -96,7 +102,7 @@ public:
     bool remove(const Key& key) {
         if (_buckets.length() == 0)
             return false;
-        uint64 h = get_hash(key);
+        uint64 h = get_hash_of_element<Key>(key);
         uint32 b = bucket_index_for_hash(h);
         auto& bucket = _buckets[b];
         for (int32 i = 0; i < bucket.length(); ++i) {
@@ -113,7 +119,7 @@ public:
     // Access or insert default-constructed value
     Value& operator[](const Key& key) {
         ensure_buckets(1);
-        uint64 h = get_hash(key);
+        uint64 h = get_hash_of_element<Key>(key);
         uint32 b = bucket_index_for_hash(h);
         auto& bucket = _buckets[b];
         for (int32 i = 0; i < bucket.length(); ++i) {
@@ -136,7 +142,7 @@ public:
     // rvalue overload for operator[]: move-key insertion
     Value& operator[](Key&& key) {
         ensure_buckets(1);
-        uint64 h = get_hash(key);
+        uint64 h = get_hash_of_element<Key>(key);
         uint32 b = bucket_index_for_hash(h);
         auto& bucket = _buckets[b];
         for (int32 i = 0; i < bucket.length(); ++i) {
@@ -183,6 +189,17 @@ public:
         return v;
     }
 
+    // iterator support (forwarded to external iterator implementation)
+    using iterator = edvar::container::iterator::map_iterator<map, false>;
+    using const_iterator = edvar::container::iterator::map_iterator<map, true>;
+
+    iterator begin() { return iterator(*this); }
+    iterator end() { return iterator(*this).seek(_count); }
+    const_iterator begin() const { return const_iterator(*this); }
+    const_iterator end() const { return const_iterator(*this).seek(_count); }
+    const_iterator cbegin() const { return const_iterator(*this); }
+    const_iterator cend() const { return const_iterator(*this).seek(_count); }
+
     bool operator==(const map& other) const {
         if (length() != other.length())
             return false;
@@ -220,6 +237,9 @@ public:
 private:
     array<array<entry>> _buckets;
     int32 _count = 0;
+
+    // allow the external iterator to access internal buckets for efficient traversal
+    template <typename MapType, bool IsConst> friend class container::iterator::map_iterator;
 
     // helper: round up to next power of two (>=1)
     static uint32 next_power_of_two(uint32 v) {
@@ -271,12 +291,17 @@ private:
             auto& bucket = _buckets[bi];
             while (bucket.length() > 0) {
                 // remove last element and move it
-                entry ent = bucket.remove_at_ref(bucket.length() - 1);
+                entry ent = bucket.remove_at_value(bucket.length() - 1);
                 uint32 nb = static_cast<uint32>(ent.hash & (pow2 - 1));
                 new_buckets[nb].add(edvar::move(ent));
             }
         }
         _buckets = edvar::move(new_buckets);
+    }
+
+    template <typename in_type> static inline uint64 get_hash_of_element(const in_type& element) {
+        
+        return edvar::hash(element);
     }
 };
 

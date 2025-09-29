@@ -4,6 +4,10 @@ namespace edvar {
 template <typename value_type, typename error_type> class value_or_error {
 public:
     value_or_error() : _state(ERROR), _value(), _error() {}
+    value_or_error(const value_or_error& other) : _state(other._state), _value(other._value), _error(other._error) {}
+    value_or_error(value_or_error&& other) noexcept
+        : _state(other._state), _value(edvar::move(other._value)), _error(edvar::move(other._error)) {}
+    ~value_or_error() = default;
     static value_or_error from_value(const value_type& value) {
         value_or_error voe;
         voe._state = VALUE;

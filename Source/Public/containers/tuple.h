@@ -21,6 +21,13 @@ struct tuple_impl<i, head, tail...> : tuple_leaf<i, head>, tuple_impl<i + 1, tai
             return tuple_impl<i + 1, tail...>::template get<j>();
         }
     }
+    template <uint32 j> const auto& get() const {
+        if constexpr (i == j) {
+            return value;
+        } else {
+            return tuple_impl<i + 1, tail...>::template get<j>();
+        }
+    }
 };
 } // namespace __private
 
@@ -33,6 +40,7 @@ public:
     void get_data_as_bytes(uint8* buffer) { get_data_as_bytes_helper<0, types...>(*this, buffer); }
 
     template <uint32 index> auto& get() { return impl.template get<index>(); }
+    template <uint32 index> const auto& get() const { return impl.template get<index>(); }
     constexpr uint32 get_total_byte_size() { return get_total_byte_size_of_pack<0, types...>(); }
     // apply
     template <typename return_type> return_type apply(return_type (*func)(types...)) {
@@ -86,9 +94,9 @@ public:
         this->template get<0>() = k;
         this->template get<1>() = v;
     }
-    key_type& key() { return this->template get<0>(); }
-    value_type& value() { return this->template get<1>(); }
-    const key_type& key() const { return this->template get<0>(); }
-    const value_type& value() const { return this->template get<1>(); }
+    key_type& key() { return (this->template get<0>()); }
+    value_type& value() { return (this->template get<1>()); }
+    const key_type& key() const { return (this->template get<0>()); }
+    const value_type& value() const { return (this->template get<1>()); }
 };
 } // namespace edvar

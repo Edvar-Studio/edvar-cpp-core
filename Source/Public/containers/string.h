@@ -36,15 +36,119 @@ int compare(const char_utf16* str1, const char_utf16* str2, bool case_sensitive 
 int compare(const char_utf32* str1, const char_utf32* str2, bool case_sensitive = true,
             const edvar::internationalization::locale* locale = nullptr);
 
+bool is_whitespace(char_utf8 ch);
+bool is_whitespace(char_utf16 ch);
+bool is_whitespace(char_utf32 ch);
+
+template <typename character_type = char_utf16, bool is_const = false> class iterator {
+public:
+    using data_type = edvar::meta::conditional_type<is_const, const character_type*, character_type*>;
+    using data_ref_type = edvar::meta::conditional_type<is_const, const character_type&, character_type&>;
+
+    iterator(character_type* start, uint32 length) : _data(start), _length(length), _current_index(0) {}
+    iterator(character_type* start) : _data(start), _length(edvar::c_string::string_length(start)), _current_index(0) {}
+    iterator(const iterator& other)
+        : _data(other._data), _length(other._length), _current_index(other._current_index) {}
+    iterator(iterator&& other) noexcept
+        : _data(other._data), _length(other._length), _current_index(other._current_index) {
+        other._data = nullptr;
+        other._length = 0;
+        other._current_index = 0;
+    }
+    ~iterator() = default;
+
+    bool has_next() const { return _current_index < _length; }
+    data_ref_type next() { return _data[_current_index++]; }
+    data_ref_type current() const { return _data[_current_index]; }
+    bool has_previous() const { return _current_index > 0; }
+    data_ref_type previous() { return _data[--_current_index]; }
+    iterator& reset() {
+        _current_index = 0;
+        return *this;
+    }
+    iterator& seek(uint32 index) {
+        if (index < _length) {
+            _current_index = index;
+        } else {
+            _current_index = _length;
+        }
+        return *this;
+    }
+    data_ref_type peek_next() {
+        if (has_next()) {
+            return _data[_current_index + 1];
+        }
+    }
+    data_ref_type peek_previous() {
+        if (has_previous()) {
+            return _data[_current_index - 1];
+        }
+    }
+
+    edvar::meta::enable_if<!is_const, iterator&> replace(const character_type& value) {
+        _data[_current_index] = value;
+        return *this;
+    }
+
+    // utility
+    bool is_whitespace() const { return is_whitespace(_data[_current_index]); }
+    void skip_whitespace() {
+        while (has_next() && is_whitespace()) {
+            ++_current_index;
+        }
+    }
+    void skip_non_whitespace() {
+        while (has_next() && !is_whitespace()) {
+            ++_current_index;
+        }
+    }
+
+    iterator& operator++() {
+        if (has_next())
+            ++_current_index;
+        return *this;
+    }
+    iterator operator++(int) {
+        iterator temp = *this;
+        ++(*this);
+        return temp;
+    }
+    iterator& operator--() {
+        if (has_previous())
+            --_current_index;
+        return *this;
+    }
+    iterator operator--(int) {
+        iterator temp = *this;
+        --(*this);
+        return temp;
+    }
+    data_ref_type operator*() { return current(); }
+    data_type operator->() { return &current(); }
+    bool operator==(const iterator& other) const {
+        return _data == other._data && _length == other._length && _current_index == other._current_index;
+    }
+    bool operator!=(const iterator& other) const { return !(*this == other); }
+
+private:
+    data_type _data;
+    uint32 _length;
+    uint32 _current_index;
+};
+// swap for iterator
 } // namespace c_string
+
+template <typename character_type> class string_base; // forward declare string_base
 
 template <typename character_type = char_utf16> class string_view {
 public:
     string_view() : _data(nullptr), _length(0) {}
     string_view(const character_type* str) : _data(str), _length(edvar::c_string::string_length(str)) {}
     string_view(const character_type* str, uint32 length) : _data(str), _length(length) {}
+    inline string_view(const string_base<character_type>& in_string_base);
     const character_type* data() const { return _data; }
     character_type* mutable_data() { return const_cast<character_type*>(_data); }
+    uint32 length() const { return _length; }
 
     struct section {
         const string_view* parent_view;
@@ -79,8 +183,8 @@ public:
         return value_or_error_code<section>::from_error(1);
     }
 
-    array<value_or_error_code<section>> find_all(const character_type* in_str, uint32 start_offset = 0) const {
-        array<value_or_error_code<section>> return_arr;
+    container::array<value_or_error_code<section>> find_all(const character_type* in_str, uint32 start_offset = 0) const {
+        container::array<value_or_error_code<section>> return_arr;
         value_or_error_code<section> latest;
         uint32 latest_offset = start_offset;
         do {
@@ -119,6 +223,21 @@ public:
         return true;
     }
 
+    bool operator!=(const character_type* other_string) const { return !(*this == other_string); }
+    bool operator!=(const string_view& other) const { return !(*this == other); }
+
+    const character_type& operator[](uint32 index) const { return _data[index]; }
+
+    using iterator = c_string::iterator<character_type, false>;
+    using const_iterator = c_string::iterator<character_type, true>;
+
+    iterator begin() { return iterator(const_cast<char_utf16*>(_data), _length); }
+    iterator end() { return iterator(const_cast<char_utf16*>(_data), _length).seek(_length); }
+    const_iterator begin() const { return const_iterator(_data, _length); }
+    const_iterator end() const { return const_iterator(_data, _length).seek(_length); }
+    const_iterator cbegin() const { return const_iterator(_data, _length); }
+    const_iterator cend() const { return const_iterator(_data, _length).seek(_length); }
+
 private:
     const character_type* _data;
     uint32 _length;
@@ -134,23 +253,29 @@ public:
     string_base(const character_type* str) {
         if (str) {
             uint32 length = edvar::c_string::string_length(str);
-            _data.resize(length + 1);
-            _data = str;
+            _data.ensure_capacity(length + 1);
+            _data.add_uninitialized(length + 1);
+            edvar::memory::copy<character_type>(_data.data(), str, length);
+            _data.data()[length] = 0; // null terminator
+        } else {
+            _data.add(0); // null terminator
         }
-        _data.add(0); // null terminator
     }
     string_base(const character_type* str, uint32 length) {
-        _data.resize(length + 1);
-        for (uint32 i = 0; i < length; ++i) {
-            _data[i] = str[i];
+        if (str == nullptr) {
+            _data.add(0); // null terminator
+            return;
         }
-        _data[length] = 0; // null terminator
+
+        _data.ensure_capacity(length + 1);
+        _data.add_uninitialized(length + 1);
+        edvar::memory::copy<character_type>(_data.data(), str, length);
+        _data.data()[length] = 0; // null terminator
     }
-    string_base(const string_base& other) { _data = other._data; }
-    string_base(string_base&& other) noexcept {
-        _data = edvar::move(other._data);
-        other._data.empty();
+    string_base(const string_base& other) {
+        _data = other._data; // copies by default
     }
+    string_base(string_base&& other) noexcept { _data = edvar::move(other._data); }
 
     inline string_base<char_utf16> to_utf16() const {
         char_utf16* as_utf16 = c_string::create_utf16(_data.data());
@@ -262,7 +387,10 @@ public:
             append(str, edvar::c_string::string_length(str));
         }
     }
-    inline void append(const string_base& other) { append(other.data(), other.length()); }
+    inline void append(const string_base& other) {
+        if (other.length() > 0)
+            append(other.data(), other.length());
+    }
     inline void append(const character_type ch) {
         if (_data.length() > 0) {
             _data.remove_at(_data.length() - 1); // remove null terminator
@@ -273,7 +401,18 @@ public:
         _data[current_length + 1] = 0; // null terminator
     }
     inline void append(const string_view<character_type>& view) { append(view.data(), view.length()); }
-    inline void append(const string_view<character_type>::section& section) { append(section.result_view); }
+    inline void append(const typename string_view<character_type>::section& section) { append(section.result_view); }
+
+    character_type& operator[](uint32 index) { return _data[index]; }
+    const character_type& operator[](uint32 index) const { return _data[index]; }
+
+    string_view<character_type> to_view() const { return string_view<character_type>(_data.data(), length()); }
+    string_view<character_type>::iterator begin() { return to_view().begin(); }
+    string_view<character_type>::iterator end() { return to_view().end(); }
+    string_view<character_type>::const_iterator begin() const { return to_view().begin(); }
+    string_view<character_type>::const_iterator end() const { return to_view().end(); }
+    string_view<character_type>::const_iterator cbegin() const { return to_view().cbegin(); }
+    string_view<character_type>::const_iterator cend() const { return to_view().cend(); }
 
     string_base& operator+=(const character_type* str) {
         append(str);
@@ -291,7 +430,7 @@ public:
         append(view);
         return *this;
     }
-    string_base& operator+=(const string_view<character_type>::section& section) {
+    string_base& operator+=(const typename string_view<character_type>::section& section) {
         append(section);
         return *this;
     }
@@ -315,7 +454,7 @@ public:
         result.append(view);
         return result;
     }
-    string_base& operator+(const string_view<character_type>::section& section) const {
+    string_base& operator+(const typename string_view<character_type>::section& section) const {
         string_base result(*this);
         result.append(section);
         return result;
@@ -325,9 +464,27 @@ private:
     array<character_type> _data;
 };
 
+template <typename character_type>
+string_view<character_type>::string_view(const string_base<character_type>& in_string_base) {
+    _data = in_string_base.data();
+    _length = in_string_base.length();
+}
+
 using string_utf32 = string_base<char_utf32>;
 using string_utf16 = string_base<char_utf16>;
 using string_utf8 = string_base<char_utf8>;
 using string = string_base<char_utf8>;
 
 } // namespace edvar
+
+#pragma region iterator_requirements
+// Requirements for iterators
+template <typename character_type>
+inline void swap(edvar::c_string::iterator<character_type>& a, edvar::c_string::iterator<character_type>& b) noexcept {
+    using edvar::swap;
+    swap(a._data, b._data);
+    swap(a._length, b._length);
+    swap(a._current_index, b._current_index);
+}
+
+#pragma endregion iterator_requirements

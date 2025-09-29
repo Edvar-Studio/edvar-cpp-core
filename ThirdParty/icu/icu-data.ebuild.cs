@@ -163,8 +163,9 @@ public class IcuData : ModuleBase
         {
             Console.WriteLine("pkgdata already built, skipping build.");
         }
-
-        if (!File.Exists(Path.Join(context.ModuleDirectory.FullName, "binaries", "icudt", "default", "icudt" + context.Platform.ExtensionForStaticLibrary)))
+        // always build for now.
+        // TODO: make the build conditional on the output files not being there.
+        //if (!File.Exists(Path.Join(context.ModuleDirectory.FullName, "binaries", "icudt", "default", "icudt" + context.Platform.ExtensionForStaticLibrary)))
         {
             Directory.CreateDirectory(Path.Join(context.ModuleDirectory.FullName, "temp", "packaging_temp"));
             // provide all the env vars for the required tools
@@ -242,10 +243,10 @@ public class IcuData : ModuleBase
                 File.Delete(dllFile);
             }
         }
-        else
-        {
-            Console.WriteLine("icu data library already built, skipping build.");
-        }
+        // else
+        // {
+        //     Console.WriteLine("icu data library already built, skipping build.");
+        // }
 
 
 
@@ -253,7 +254,7 @@ public class IcuData : ModuleBase
         {
             if (context.Platform.Name == "windows")
             {
-                Libraries.Public.Add(Path.Join(context.ModuleDirectory.FullName, "Binaries", "icudt", "default", "icudt77" + context.Platform.ExtensionForStaticLibrary));
+                Libraries.Public.Add(Path.Join(context.ModuleDirectory.FullName, "Binaries", "icudt", "default", (PackageType == DataPackageType.Static ? "s" : string.Empty) + "icudt77" + context.Platform.ExtensionForStaticLibrary));
             }
             else if (context.Platform.Name == "unix")
             {

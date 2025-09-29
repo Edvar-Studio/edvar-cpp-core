@@ -1,7 +1,7 @@
 #include "containers/string.h"
 #include "internationalization/locale.h"
 #include "unicode/ustring.h" // IWYU pragma: keep used for u_str functions.
-#include "unicode/ucol.h"
+#include "unicode/coll.h"
 namespace edvar::c_string {
 char_utf8* create_utf8(const char_utf16* in_string) {
     if (!in_string)
@@ -257,21 +257,21 @@ int compare(const char_utf16* str1, const char_utf16* str2, bool case_sensitive,
     if (length1 != length2) {
         return (length1 < length2) ? -1 : 1;
     }
-    UCollator* collator = ucol_open(locale ? locale->name() : nullptr, &status);
-    if (U_FAILURE(status) || !collator) {
-        if (collator)
-            ucol_close(collator);
+    if (locale == nullptr) {
+        locale = &edvar::internationalization::locale::current();
+    }
+    icu::Collator* coll =
+        icu::Collator::createInstance(*reinterpret_cast<const icu::Locale*>(locale->get_icu_locale_data()), status);
+    if (U_FAILURE(status) || !coll) {
+        delete coll;
         return 0; // error opening collator
     }
-    ucol_setStrength(collator, case_sensitive ? UCOL_TERTIARY : UCOL_SECONDARY);
-    int cmp = ucol_strcoll(collator, reinterpret_cast<const UChar*>(str1), length1,
-                           reinterpret_cast<const UChar*>(str2), length2);
-    ucol_close(collator);
-    if (cmp < 0)
-        return -1;
-    if (cmp > 0)
-        return 1;
-    return 0;
+    coll->setStrength(case_sensitive ? icu::Collator::TERTIARY : icu::Collator::SECONDARY);
+    int cmp =
+        coll->compare(reinterpret_cast<const UChar*>(str1), length1, reinterpret_cast<const UChar*>(str2), length2);
+    delete coll;
+    return cmp;
+    
 }
 int compare(const char_utf32* str1, const char_utf32* str2, bool case_sensitive,
             const edvar::internationalization::locale* locale) {
@@ -287,4 +287,8 @@ int compare(const char_utf32* str1, const char_utf32* str2, bool case_sensitive,
     delete[] intermediate2;
     return result;
 }
+
+bool is_whitespace(char_utf8 ch) { return is_whitespace(static_cast<char_utf16>(ch)); }
+bool is_whitespace(char_utf16 ch) { return u_isUWhiteSpace(static_cast<UChar32>(ch)); }
+bool is_whitespace(char_utf32 ch) { return is_whitespace(static_cast<char_utf16>(ch)); }
 } // namespace edvar::c_string

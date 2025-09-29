@@ -58,31 +58,8 @@ const locale* locale::get(const char* language, const char* country, const char*
         if (variant && strcmp(loc->variant(), variant) != 0) {
             continue;
         }
-        if (keywords_and_values) {
-            // check keywords and values
-            icu::StringEnumeration* keywords = static_cast<const icu::Locale*>(loc->_icu_locale_data)->createKeywords();
-            bool all_match = true;
-            int32_t key_len = 0;
-            UErrorCode status = U_ZERO_ERROR;
-            const char* key = keywords->next(&key_len, status);
-            while (key && U_SUCCESS(status)) {
-                char value[512];
-                static_cast<const icu::Locale*>(loc->_icu_locale_data)->getKeywordValue(key, value, 512, status);
-                if (U_SUCCESS(status)) {
-                    // check if key=value is in keywords_and_values
-                    edvar::string_utf8 key_value_str = edvar::string_utf8(reinterpret_cast<const char_utf8*>(key)) + "=" + edvar::string_utf8(value);
-                    if (!edvar::c_string::contains(edvar::string_utf8(keywords_and_values), key_value_str, true)) {
-                        all_match = false;
-                        break;
-                    }
-                }
-                key = keywords->next(&key_len);
-            }
-            delete keywords;
-            if (!all_match) {
-                continue;
-            }
-        }
+        // TODO: keywords_and_values comparison
+        return loc;
     }
     return nullptr;
 }

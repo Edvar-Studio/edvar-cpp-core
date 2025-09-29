@@ -3,10 +3,7 @@
 namespace edvar::meta {
 #pragma region enable_if
 namespace structs {
-
-template <typename in_type> in_type declval() noexcept {
-    static_assert(false, "declval is not allowed in an evaluated context");
-}
+template <typename in_type> in_type declval() noexcept {}
 
 template <bool expression, typename return_type = void> struct enable_if;
 
@@ -19,7 +16,34 @@ template <typename return_type> struct enable_if<false, return_type> {};
 template <bool expression, typename return_type = void>
 using enable_if = typename edvar::meta::structs::enable_if<expression, return_type>::type;
 #pragma endregion enable_if
+#pragma region is_builtin_type
+namespace structs{
+    // Trait to detect built-in types (arithmetic, void, nullptr_t)
+template <typename T> struct is_builtin_type {
+    static constexpr bool value = false;
+};
+template <> struct is_builtin_type<bool> { static constexpr bool value = true; };
+template <> struct is_builtin_type<char> { static constexpr bool value = true; };
+template <> struct is_builtin_type<wchar_t> { static constexpr bool value = true; };
+template <> struct is_builtin_type<signed char> { static constexpr bool value = true; };
+template <> struct is_builtin_type<unsigned char> { static constexpr bool value = true; };
+template <> struct is_builtin_type<short> { static constexpr bool value = true; };
+template <> struct is_builtin_type<unsigned short> { static constexpr bool value = true; };
+template <> struct is_builtin_type<int> { static constexpr bool value = true; };
+template <> struct is_builtin_type<unsigned int> { static constexpr bool value = true; };
+template <> struct is_builtin_type<long> { static constexpr bool value = true; };
+template <> struct is_builtin_type<unsigned long> { static constexpr bool value = true; };
+template <> struct is_builtin_type<long long> { static constexpr bool value = true; };
+template <> struct is_builtin_type<unsigned long long> { static constexpr bool value = true; };
+template <> struct is_builtin_type<float> { static constexpr bool value = true; };
+template <> struct is_builtin_type<double> { static constexpr bool value = true; };
+template <> struct is_builtin_type<long double> { static constexpr bool value = true; };
+template <> struct is_builtin_type<void> { static constexpr bool value = true; };
+template <> struct is_builtin_type<std::nullptr_t> { static constexpr bool value = true; };
+}
 
+template<typename in_type>
+inline constexpr bool is_builtin_type = edvar::meta::structs::is_builtin_type<in_type>::value;
 #pragma region is_move_assignable
 namespace structs {
 template <typename in_type> struct is_move_assignable {
@@ -40,7 +64,69 @@ inline constexpr bool is_move_assignable = edvar::meta::structs::is_move_assigna
 template <typename in_type>
 inline constexpr bool is_nothrow_move_assignable = edvar::meta::structs::is_nothrow_move_assignable<in_type>::value;
 #pragma endregion is_move_assignable
+#pragma region is_move_constructible
+namespace structs {
+template <typename in_type> struct is_move_constructible {
+private:
+    // detect expression: T(std::declval<T&&>())
+    template <typename in_type_proxy, typename = decltype(in_type_proxy(declval<in_type_proxy&&>()))>
+    static char test(int);
+    template <typename> static int test(...);
 
+public:
+    static constexpr bool value = sizeof(test<in_type>(0)) == sizeof(char);
+};
+template <typename in_type> struct is_nothrow_move_constructible {
+    static constexpr bool value = noexcept(in_type(declval<in_type&&>()));
+};
+} // namespace structs
+template <typename in_type>
+static constexpr bool is_move_constructible = edvar::meta::structs::is_move_constructible<in_type>::value;
+template <typename in_type>
+static constexpr bool is_nothrow_move_constructible =
+    edvar::meta::structs::is_nothrow_move_constructible<in_type>::value;
+#pragma endregion is_move_constructible
+#pragma region is_copy_constructible
+namespace structs {
+template <typename in_type> struct is_copy_constructible {
+private:
+    // detect expression: T(std::declval<const T&>())
+    template <typename in_type_proxy, typename = decltype(in_type_proxy(declval<const in_type_proxy&>()))>
+    static char test(int);
+    template <typename> static int test(...);
+
+public:
+    static constexpr bool value = sizeof(test<in_type>(0)) == sizeof(char);
+};
+
+template <typename in_type> struct is_nothrow_copy_constructible {
+    static constexpr bool value = noexcept(in_type(declval<const in_type&>()));
+};
+} // namespace structs
+template <typename in_type>
+inline constexpr bool is_copy_constructible = edvar::meta::structs::is_copy_constructible<in_type>::value;
+template <typename in_type>
+inline constexpr bool is_nothrow_copy_constructible =
+    edvar::meta::structs::is_nothrow_copy_constructible<in_type>::value;
+#pragma endregion is_copy_constructible
+#pragma region is_destructible
+namespace structs {
+template <typename in_type> struct is_destructible {
+private:
+    template <typename U, typename = decltype(declval<U&>().~U())> static char test(int);
+    template <typename> static int test(...);
+public:
+    static constexpr bool value = is_builtin_type<in_type>::value ? true : (sizeof(test<in_type>(0)) == sizeof(char));
+};
+template <typename in_type> struct is_nothrow_destructible {
+    static constexpr bool value = noexcept(declval<in_type&>().~in_type());
+};
+} // namespace structs
+template <typename in_type>
+inline constexpr bool is_destructible = edvar::meta::structs::is_destructible<in_type>::value;
+template <typename in_type>
+inline constexpr bool is_nothrow_destructible = edvar::meta::structs::is_nothrow_destructible<in_type>::value;
+#pragma endregion is_destructible
 #pragma region is_character
 namespace structs {
 template <typename in_type> struct is_character_template {
@@ -258,39 +344,54 @@ template <typename in_type> struct remove_volatile {
 template <typename in_type> struct remove_volatile<volatile in_type> {
     typedef in_type type;
 };
-template<typename in_type> struct remove_volatile<const volatile in_type> {
+template <typename in_type> struct remove_volatile<const volatile in_type> {
     typedef const in_type type;
 };
-} // namespace structs>
-template<typename in_type> using remove_volatile = typename edvar::meta::structs::remove_volatile<in_type>::type;
+} // namespace structs
+template <typename in_type> using remove_volatile = typename edvar::meta::structs::remove_volatile<in_type>::type;
 #pragma region remove_cv
-template<typename in_type> using remove_cv = typename edvar::meta::remove_const<edvar::meta::remove_volatile<in_type>>;
+template <typename in_type> using remove_cv = typename edvar::meta::remove_const<edvar::meta::remove_volatile<in_type>>;
 #pragma endregion remove_cv
 #pragma region decay
 namespace structs {
-template<typename in_type> struct decay_helper{
+template <typename in_type> struct decay_helper {
     using type = typename edvar::meta::remove_cv<in_type>::type;
 };
-template<typename in_type, size_t length> struct decay_helper<in_type[length]>{
+template <typename in_type, size_t length> struct decay_helper<in_type[length]> {
     using type = typename edvar::meta::remove_cv<in_type>::type*;
 };
-template<typename in_type> struct decay_helper<in_type[]>{
+template <typename in_type> struct decay_helper<in_type[]> {
     using type = typename edvar::meta::remove_cv<in_type>::type*;
 };
-template<typename return_type, typename... args> struct decay_helper<return_type(args...)>{
-    using type = return_type(*)(args...);
+template <typename return_type, typename... args> struct decay_helper<return_type(args...)> {
+    using type = return_type (*)(args...);
 };
-template<typename object_type, typename return_type, typename... args> struct decay_helper<return_type(object_type::*)(args...)>{
-    using type = return_type(object_type::*)(args...);
+template <typename object_type, typename return_type, typename... args>
+struct decay_helper<return_type (object_type::*)(args...)> {
+    using type = return_type (object_type::*)(args...);
 };
 
 template <typename in_type> struct decay {
 private:
     using cv_removed_type = typename remove_cv<in_type>::type;
+
 public:
     using type = typename decay_helper<cv_removed_type>::type;
 };
 } // namespace structs
 template <typename T> using decay = typename edvar::meta::structs::decay<T>::type;
 #pragma endregion decay
+
+#pragma region conditional_type
+namespace structs{
+template <bool condition, typename true_type, typename false_type> struct conditional_type {
+    using type = true_type;
+};
+template <typename true_type, typename false_type> struct conditional_type<false, true_type, false_type> {
+    using type = false_type;
+};
+} // namespace structs
+template <bool condition, typename true_type, typename false_type>
+using conditional_type = typename edvar::meta::structs::conditional_type<condition, true_type, false_type>::type;
+#pragma endregion conditional_type
 } // namespace edvar::meta
