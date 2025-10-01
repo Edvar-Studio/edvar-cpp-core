@@ -25,7 +25,7 @@ inline uint64 hash(const double& v) { return *reinterpret_cast<const uint64*>(&v
 inline uint64 hash(const long double& v) {
     const uint8* bytes = reinterpret_cast<const uint8*>(&v);
     uint64 h = FNV_OFFSET_BASIS;
-    for (size_t i = 0; i < sizeof(long double); ++i) {
+    for (uint32 i = 0; i < sizeof(long double); ++i) {
         h ^= bytes[i];
         h *= FNV_PRIME;
     }
