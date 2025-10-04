@@ -1,5 +1,5 @@
 #pragma once
-#include  "containers/iterators/array_view_iterator.h"
+#include "containers/iterators/array_view_iterator.h"
 
 namespace edvar::container {
 template <typename storage_type> class array_view {
@@ -20,8 +20,11 @@ public:
     const_iterator cbegin() const { return const_iterator(_data, _length); }
     const_iterator cend() const { return const_iterator(_data, _length).seek(_length); }
 
+    const storage_type& operator[](uint32 index) const { return _data[index]; }
+    storage_type& operator[](uint32 index) { return _data[index]; }
+
 private:
     storage_type* _data;
     uint32 _length;
 };
-} // namespace edvar::containers
+} // namespace edvar::container

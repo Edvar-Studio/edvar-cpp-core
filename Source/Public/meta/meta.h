@@ -17,32 +17,68 @@ template <bool expression, typename return_type = void>
 using enable_if = typename edvar::meta::structs::enable_if<expression, return_type>::type;
 #pragma endregion enable_if
 #pragma region is_builtin_type
-namespace structs{
-    // Trait to detect built-in types (arithmetic, void, nullptr_t)
+namespace structs {
+// Trait to detect built-in types (arithmetic, void, nullptr_t)
 template <typename T> struct is_builtin_type {
     static constexpr bool value = false;
 };
-template <> struct is_builtin_type<bool> { static constexpr bool value = true; };
-template <> struct is_builtin_type<char> { static constexpr bool value = true; };
-template <> struct is_builtin_type<wchar_t> { static constexpr bool value = true; };
-template <> struct is_builtin_type<signed char> { static constexpr bool value = true; };
-template <> struct is_builtin_type<unsigned char> { static constexpr bool value = true; };
-template <> struct is_builtin_type<short> { static constexpr bool value = true; };
-template <> struct is_builtin_type<unsigned short> { static constexpr bool value = true; };
-template <> struct is_builtin_type<int> { static constexpr bool value = true; };
-template <> struct is_builtin_type<unsigned int> { static constexpr bool value = true; };
-template <> struct is_builtin_type<long> { static constexpr bool value = true; };
-template <> struct is_builtin_type<unsigned long> { static constexpr bool value = true; };
-template <> struct is_builtin_type<long long> { static constexpr bool value = true; };
-template <> struct is_builtin_type<unsigned long long> { static constexpr bool value = true; };
-template <> struct is_builtin_type<float> { static constexpr bool value = true; };
-template <> struct is_builtin_type<double> { static constexpr bool value = true; };
-template <> struct is_builtin_type<long double> { static constexpr bool value = true; };
-template <> struct is_builtin_type<void> { static constexpr bool value = true; };
-template <> struct is_builtin_type<std::nullptr_t> { static constexpr bool value = true; };
-}
+template <> struct is_builtin_type<bool> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<char> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<wchar_t> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<signed char> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<unsigned char> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<short> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<unsigned short> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<int> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<unsigned int> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<long> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<unsigned long> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<long long> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<unsigned long long> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<float> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<double> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<long double> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<void> {
+    static constexpr bool value = true;
+};
+template <> struct is_builtin_type<std::nullptr_t> {
+    static constexpr bool value = true;
+};
+} // namespace structs
 
-template<typename in_type>
+template <typename in_type>
 inline constexpr bool is_builtin_type = edvar::meta::structs::is_builtin_type<in_type>::value;
 #pragma region is_move_assignable
 namespace structs {
@@ -115,6 +151,7 @@ template <typename in_type> struct is_destructible {
 private:
     template <typename U, typename = decltype(declval<U&>().~U())> static char test(int);
     template <typename> static int test(...);
+
 public:
     static constexpr bool value = is_builtin_type<in_type>::value ? true : (sizeof(test<in_type>(0)) == sizeof(char));
 };
@@ -201,6 +238,47 @@ template <> struct is_integral<uint64> {
 } // namespace structs
 template <typename in_type> inline constexpr bool is_integral = edvar::meta::structs::is_integral<in_type>::value;
 #pragma endregion is_integral
+
+#pragma region is_unsigned
+namespace structs {
+template <typename in_type> struct is_unsigned {
+    static constexpr bool value = false;
+};
+template <> struct is_unsigned<uint8> {
+    static constexpr bool value = true;
+};
+template <> struct is_unsigned<uint16> {
+    static constexpr bool value = true;
+};
+template <> struct is_unsigned<uint32> {
+    static constexpr bool value = true;
+};
+template <> struct is_unsigned<uint64> {
+    static constexpr bool value = true;
+};
+} // namespace structs
+template <typename in_type> inline constexpr bool is_unsigned = edvar::meta::structs::is_unsigned<in_type>::value;
+#pragma endregion is_unsigned
+#pragma region is_signed
+namespace structs {
+template <typename in_type> struct is_signed {
+    static constexpr bool value = false;
+};
+template <> struct is_signed<int8> {
+    static constexpr bool value = true;
+};
+template <> struct is_signed<int16> {
+    static constexpr bool value = true;
+};
+template <> struct is_signed<int32> {
+    static constexpr bool value = true;
+};
+template <> struct is_signed<int64> {
+    static constexpr bool value = true;
+};
+} // namespace structs
+template <typename in_type> inline constexpr bool is_signed = edvar::meta::structs::is_signed<in_type>::value;
+#pragma endregion is_signed
 
 #pragma region is_floating_point
 namespace structs {
@@ -383,7 +461,7 @@ template <typename T> using decay = typename edvar::meta::structs::decay<T>::typ
 #pragma endregion decay
 
 #pragma region conditional_type
-namespace structs{
+namespace structs {
 template <bool condition, typename true_type, typename false_type> struct conditional_type {
     using type = true_type;
 };

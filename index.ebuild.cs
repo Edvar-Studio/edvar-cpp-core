@@ -2,7 +2,7 @@ namespace CppCore;
 
 using System.Runtime.InteropServices;
 using ebuild.api;
-
+using ebuild.api.Compiler;
 
 class EdvarCppCore : ModuleBase
 {
@@ -16,6 +16,7 @@ class EdvarCppCore : ModuleBase
         this.Includes.Public.Add("Source/Public");
         this.Includes.Private.Add("Source/Private");
         this.ForceIncludes.Public.Add("Source/Private/force_include.h");
+        this.CPUExtension = CPUExtensions.SSE2;
 
 
         // Add ICU combined as a static library to this module

@@ -1,7 +1,5 @@
 #pragma once
 #include "./array.h" // IWYU pragma: keep
-#include "platform/basic_types.h"
-#include "utils/value_or_error.h"
 
 namespace edvar {
 namespace c_string {
@@ -91,7 +89,7 @@ public:
     }
 
     // utility
-    bool is_whitespace() const { return is_whitespace(_data[_current_index]); }
+    bool is_whitespace() const { return c_string::is_whitespace(_data[_current_index]); }
     void skip_whitespace() {
         while (has_next() && is_whitespace()) {
             ++_current_index;
@@ -183,7 +181,8 @@ public:
         return value_or_error_code<section>::from_error(1);
     }
 
-    container::array<value_or_error_code<section>> find_all(const character_type* in_str, uint32 start_offset = 0) const {
+    container::array<value_or_error_code<section>> find_all(const character_type* in_str,
+                                                            uint32 start_offset = 0) const {
         container::array<value_or_error_code<section>> return_arr;
         value_or_error_code<section> latest;
         uint32 latest_offset = start_offset;
@@ -402,6 +401,45 @@ public:
     }
     inline void append(const string_view<character_type>& view) { append(view.data(), view.length()); }
     inline void append(const typename string_view<character_type>::section& section) { append(section.result_view); }
+
+    template <typename... Args> static string_base format(const character_type* format, const Args&&... args) {
+        string_view<character_type> format_view(format);
+        string_base result;
+
+        // arguments to string
+        array<string_base> arg_strings;
+        constexpr int num_args = sizeof...(Args);
+        arg_strings.add_uninitialized(num_args);
+
+        int arg_index = 0;
+        ((string_base::to_string_helper(args, arg_strings[arg_index++])), ...);
+        // parse format string
+        for (auto iterator = format_view.begin(); iterator.has_next(); ++iterator) {
+            character_type ch = *iterator;
+            // skip the whitespace before processing
+            if (iterator.has_next()) {
+                iterator.skip_whitespace();
+            } else {
+                result.append(ch);
+                break;
+            }
+            string_base braces_inner;
+            switch (ch) {
+            case '{': {
+                // if next is also {, then it is escaped
+                break;
+            }
+            case '}' : {
+                break;
+            }
+            default: {
+                
+                break;
+            }
+            }
+        }
+        return result;
+    }
 
     character_type& operator[](uint32 index) { return _data[index]; }
     const character_type& operator[](uint32 index) const { return _data[index]; }

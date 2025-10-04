@@ -25,6 +25,7 @@
 #include <initializer_list>       // IWYU pragma: export
 #include "platform/basic_types.h" // IWYU pragma: export
 #include "meta/meta.h"            // IWYU pragma: export
+#include "math/math.h"            // IWYU pragma: export
 #include "memory/operations.h"    // IWYU pragma: export
 #include "memory/allocators.h"    // IWYU pragma: export
 
@@ -48,4 +49,5 @@ using array = container::array<storage_type, allocator_type>;
 #include "containers/array.h"      // IWYU pragma: export
 #include "memory/smart_pointers.h" // IWYU pragma: export
 #include "containers/string.h"     // IWYU pragma: export
+#include "utils/to_string.h"       // IWYU pragma: export
 #include "containers/map.h"        // IWYU pragma: export
