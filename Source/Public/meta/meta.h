@@ -435,7 +435,7 @@ namespace structs {
 template <typename in_type> struct decay_helper {
     using type = typename edvar::meta::remove_cv<in_type>::type;
 };
-template <typename in_type, size_t length> struct decay_helper<in_type[length]> {
+template <typename in_type, uint32 length> struct decay_helper<in_type[length]> {
     using type = typename edvar::meta::remove_cv<in_type>::type*;
 };
 template <typename in_type> struct decay_helper<in_type[]> {
