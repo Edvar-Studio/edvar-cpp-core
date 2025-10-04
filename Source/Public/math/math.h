@@ -97,6 +97,7 @@ inline double power(const double& value, const int& exponent) {
 }
 
 double square_root(const int& value, const double& tolerance = 1e-6);
+double square_root(const uint32& value, const double& tolerance = 1e-6);
 double square_root(const double& value, const double& tolerance = 1e-6);
 double square_root(const float& value, const double& tolerance = 1e-6f);
 
