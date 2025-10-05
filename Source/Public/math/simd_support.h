@@ -5,6 +5,10 @@
 #    define EDVAR_CPP_CORE_USE_SSE4_2 1
 #endif
 
+#ifndef EDVAR_CPP_CORE_USE_AVX2
+#    define EDVAR_CPP_CORE_USE_AVX2 1
+#endif
+
 namespace edvar::math::simd {
 
 /**
@@ -76,10 +80,16 @@ struct alignas(16) simd_128d {
     simd_128d sqrt() const;
     simd_128d& sqrt_inline();
 
-    enum class shuffle_mode : int32 { xy_yx = 1, yx_xy = 2, xx_yy = 0, yy_xx = 3 };
+    struct shuffle_opts {
+        enum use_mode { use_x = 0, use_y = 1 };
+        use_mode x;
+        use_mode y;
 
-    simd_128d shuffle(const simd_128d& other, const shuffle_mode mode = shuffle_mode::xy_yx) const;
-    simd_128d& shuffle_inline(const simd_128d& other, const shuffle_mode mode = shuffle_mode::xy_yx);
+        int32 to_int32() const { return (static_cast<int32>(y) << 2) | static_cast<int32>(x); }
+    };
+
+    simd_128d shuffle(const simd_128d& other, const shuffle_opts& opts) const;
+    simd_128d& shuffle_inline(const simd_128d& other, const shuffle_opts& opts);
 
     simd_128d horizontal_add(const simd_128d& rhs) const;
     simd_128d& horizontal_add_inline(const simd_128d& rhs);
@@ -145,14 +155,21 @@ struct alignas(16) simd_128f {
     simd_128f sqrt() const;
     simd_128f& sqrt_inline();
 
-    enum class shuffle_mode : int32 {
-        xyzw_wzyx = 0,
-        xxyy_zzww = 1,
-        yxwz_zwxy = 2,
+    struct shuffle_opts {
+        enum use_mode { use_x = 0, use_y = 1, use_z = 2, use_w = 3 };
+        use_mode x;
+        use_mode y;
+        use_mode z;
+        use_mode w;
+
+        int32 to_int32() const {
+            return (static_cast<int32>(w) << 6) | (static_cast<int32>(z) << 4) | (static_cast<int32>(y) << 2) |
+                   static_cast<int32>(x);
+        }
     };
 
-    simd_128f shuffle(const simd_128f& other, const shuffle_mode mode = shuffle_mode::xyzw_wzyx) const;
-    simd_128f& shuffle_inline(const simd_128f& other, const shuffle_mode mode = shuffle_mode::xyzw_wzyx);
+    simd_128f shuffle(const simd_128f& other, const shuffle_opts& opts) const;
+    simd_128f& shuffle_inline(const simd_128f& other, const shuffle_opts& opts);
 
     simd_128f horizontal_add(const simd_128f& rhs) const;
     simd_128f& horizontal_add_inline(const simd_128f& rhs);
@@ -210,6 +227,18 @@ struct alignas(16) simd_128i {
     bool operator==(const simd_128i& rhs) const;
     bool operator!=(const simd_128i& rhs) const;
 
+    simd_128i operator<<(const int32 shift) const;
+    simd_128i& operator<<=(const int32 shift);
+
+    simd_128i operator<<(const simd_128i& shift) const;
+    simd_128i& operator<<=(const simd_128i& shift);
+
+    simd_128i operator>>(const int32 shift) const;
+    simd_128i& operator>>=(const int32 shift);
+
+    simd_128i operator>>(const simd_128i& shift) const;
+    simd_128i& operator>>=(const simd_128i& shift);
+
     inline int32& operator[](uint32 index) { return this->v[index]; }
     inline const int32& operator[](uint32 index) const { return this->v[index]; }
 
@@ -218,15 +247,21 @@ struct alignas(16) simd_128i {
 
     simd_128i sqrt() const;
     simd_128i& sqrt_inline();
+    struct shuffle_opts {
+        enum use_mode { use_x = 0, use_y = 1, use_z = 2, use_w = 3 };
+        use_mode x;
+        use_mode y;
+        use_mode z;
+        use_mode w;
 
-    enum class shuffle_mode : int32 {
-        xyzw_wzyx = 0,
-        xxyy_zzww = 1,
-        yxwz_zwxy = 2,
+        int32 to_int32() const {
+            return (static_cast<int32>(w) << 6) | (static_cast<int32>(z) << 4) | (static_cast<int32>(y) << 2) |
+                   static_cast<int32>(x);
+        }
     };
 
-    simd_128i shuffle(const simd_128i& other, const shuffle_mode mode = shuffle_mode::xyzw_wzyx) const;
-    simd_128i& shuffle_inline(const simd_128i& other, const shuffle_mode mode = shuffle_mode::xyzw_wzyx);
+    simd_128i shuffle(const shuffle_opts& opts) const;
+    simd_128i& shuffle_inline(const shuffle_opts& opts);
 };
 
 /**
@@ -286,10 +321,16 @@ struct alignas(16) simd_128l {
     simd_128l sqrt() const;
     simd_128l& sqrt_inline();
 
-    enum class shuffle_mode : int32 { xy_yx = 1, yx_xy = 2, xx_yy = 0, yy_xx = 3 };
+    struct shuffle_opts {
+        enum use_mode { use_x = 0, use_y = 1 };
+        use_mode x;
+        use_mode y;
 
-    simd_128l shuffle(const simd_128l& other, const shuffle_mode mode = shuffle_mode::xy_yx) const;
-    simd_128l& shuffle_inline(const simd_128l& other, const shuffle_mode mode = shuffle_mode::xy_yx);
+        int32 to_int32() const { return (static_cast<int32>(y) << 2) | static_cast<int32>(x); }
+    };
+
+    simd_128l shuffle(const simd_128l& other, const shuffle_opts& opts) const;
+    simd_128l& shuffle_inline(const simd_128l& other, const shuffle_opts& opts);
 };
 
 /**
@@ -430,7 +471,7 @@ struct alignas(16) simd_128ul {
     simd_128ul& sqrt_inline();
 
     struct shuffle_opts {
-        enum use_mode { use_x = 0, use_y = 1 };
+        enum use_mode { use_first = 0, use_second = 1 };
         use_mode x;
         use_mode y;
 
@@ -445,6 +486,85 @@ struct alignas(16) simd_128ul {
 
     simd_128ul horizontal_sub(const simd_128ul& rhs) const;
     simd_128ul& horizontal_sub_inline(const simd_128ul& rhs);
+};
+
+struct simd_256d {
+    union alignas(32) {
+#if EDVAR_CPP_CORE_USE_AVX2 // Only include _m256d if AVX2 is enabled.
+        __m256d data;
+#endif
+        __m128d halves[2];
+        double v[4];
+        struct {
+            double x, y, z, w;
+        };
+    };
+
+    simd_256d();
+    simd_256d(const double all);
+    simd_256d(const double x, const double y, const double z, const double w);
+    simd_256d(const double* to_place_data);
+    simd_256d(const std::initializer_list<double>& list);
+    ~simd_256d();
+    simd_256d(const simd_256d& other);
+    simd_256d(simd_256d&& other) noexcept;
+
+    simd_256d& operator=(const simd_256d& rhs);
+    simd_256d& operator=(simd_256d&& rhs) noexcept;
+    simd_256d& operator=(const double* to_place_data);
+    simd_256d& operator=(const std::initializer_list<double>& list);
+    simd_256d& operator=(const double all);
+#if EDVAR_CPP_CORE_USE_AVX2
+    simd_256d& operator=(const __m256d& other);
+#endif
+    inline double& operator[](uint32 index) { return this->v[index]; }
+    inline const double& operator[](uint32 index) const { return this->v[index]; }
+
+    static simd_256d max(const simd_256d& lhs, const simd_256d& rhs);
+    static simd_256d min(const simd_256d& lhs, const simd_256d& rhs);
+
+    simd_256d sqrt() const;
+    simd_256d& sqrt_inline();
+
+    simd_256d operator+(const simd_256d& rhs) const;
+    simd_256d& operator+=(const simd_256d& rhs);
+    simd_256d operator-(const simd_256d& rhs) const;
+    simd_256d& operator-=(const simd_256d& rhs);
+    simd_256d operator*(const simd_256d& rhs) const;
+    simd_256d& operator*=(const simd_256d& rhs);
+    simd_256d operator/(const simd_256d& rhs) const;
+    simd_256d& operator/=(const simd_256d& rhs);
+    simd_256d operator&(const simd_256d& rhs) const;
+    simd_256d& operator&=(const simd_256d& rhs);
+    simd_256d operator|(const simd_256d& rhs) const;
+    simd_256d& operator|=(const simd_256d& rhs);
+    simd_256d operator^(const simd_256d& rhs) const;
+    simd_256d& operator^=(const simd_256d& rhs);
+    simd_256d operator!() const;
+    simd_256d operator-() const;
+    bool operator==(const simd_256d& rhs) const;
+    bool operator!=(const simd_256d& rhs) const;
+
+    simd_256d horizontal_add(const simd_256d& rhs) const;
+    simd_256d& horizontal_add_inline(const simd_256d& rhs);
+
+    simd_256d horizontal_sub(const simd_256d& rhs) const;
+    simd_256d& horizontal_sub_inline(const simd_256d& rhs);
+
+    
+    template<uint8 x, uint8 y, uint8 z, uint8 w>
+    simd_256d shuffle() const{
+        static_assert(x < 4 && y < 4 && z < 4 && w < 4, "Shuffle indices must be in the range [0, 3]");
+        constexpr int shuffle_mask = (((w) << 6) | ((z) << 4) | ((y) << 2) | ((x)));
+        return this->shuffle(shuffle_mask);
+    }
+
+    simd_256d shuffle(const int& shuffle_mask) const;
+    simd_256d& shuffle_inline(const int& shuffle_mask);
+
+
+    simd_256d cross(const simd_256d& other) const;
+    simd_256d& cross_inline(const simd_256d& other);
 };
 
 namespace meta {
@@ -483,6 +603,12 @@ template <> struct simd_traits<simd_128ul> {
     static constexpr bool is_simd = true;
     static constexpr size_t element_count = 2;
     using element_type = uint64;
+};
+
+template <> struct simd_traits<simd_256d> {
+    static constexpr bool is_simd = true;
+    static constexpr size_t element_count = 4;
+    using element_type = double;
 };
 } // namespace meta
 

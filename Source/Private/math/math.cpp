@@ -1,69 +1,7 @@
 #include "math/math.h"
+#include "math/simd_support.h"
 
 namespace edvar::math {
-
-double square_root(const int& value, const double& tolerance) {
-    if (value < 0) {
-        return 0;
-    }
-    // Newton-Raphson method for square root approximation
-    if (value == 0) [[unlikely]] {
-        return 0;
-    }
-    int x = value;
-    int last = 0;
-    // Iterate until convergence (tolerance: 1e-6)
-    for (int i = 0; i < 20; ++i) {
-        last = x;
-        x = static_cast<int>(0.5) * (x + value / x);
-        if (abs(x - last) < static_cast<int>(tolerance)) {
-            break;
-        }
-    }
-    return x;
-}
-
-double square_root(const float& value, const double& tolerance) {
-    if (value < 0.0f) {
-        return 0.0f;
-    }
-    // Newton-Raphson method for square root approximation
-    if (value == 0.0f) [[unlikely]] {
-        return 0.0f;
-    }
-    float x = value;
-    float last = 0.0f;
-    // Iterate until convergence (tolerance: 1e-6)
-    for (int i = 0; i < 20; ++i) {
-        last = x;
-        x = 0.5f * (x + value / x);
-        if (math::abs(x - last) < static_cast<float>(tolerance)) {
-            break;
-        }
-    }
-    return x;
-}
-
-double square_root(const double& value, const double& tolerance) {
-    if (value < 0.0) {
-        return 0.0;
-    }
-    // Newton-Raphson method for square root approximation
-    if (value == 0.0) [[unlikely]] {
-        return 0.0;
-    }
-    double x = value;
-    double last = 0.0;
-    // Iterate until convergence (tolerance: 1e-6)
-    for (int i = 0; i < 20; ++i) {
-        last = x;
-        x = 0.5 * (x + value / x);
-        if (math::abs(x - last) < tolerance) {
-            break;
-        }
-    }
-    return x;
-}
 
 double ln(const double& value) {
     if (value <= 0.0) [[unlikely]] {
@@ -194,6 +132,42 @@ double exp(const double& value, const double& tolerance) {
         result += term;
     }
     return result;
+}
+
+double square_root(const uint32& value, const double& tolerance) {
+    simd::simd_128d vec(0, static_cast<double>(value));
+    vec.sqrt_inline();
+    return vec.y;
+}
+
+double square_root(const int& value, const double& tolerance) {
+    simd::simd_128d vec(0, static_cast<double>(value));
+    vec.sqrt_inline();
+    return vec.y;
+}
+
+double square_root(const float& value, const double& tolerance) {
+    simd::simd_128f vec(0, 0, 0, value);
+    vec.sqrt_inline();
+    return vec.z;
+}
+
+double square_root(const double& value, const double& tolerance) {
+    simd::simd_128d vec(0, value);
+    vec.sqrt_inline();
+    return vec.y;
+}
+
+double square_root(const int64& value, const double& tolerance) {
+    simd::simd_128d vec(0, static_cast<double>(value));
+    vec.sqrt_inline();
+    return vec.y;
+}
+
+double square_root(const uint64& value, const double& tolerance) {
+    simd::simd_128d vec(0, static_cast<double>(value));
+    vec.sqrt_inline();
+    return vec.y;
 }
 
 } // namespace edvar::math

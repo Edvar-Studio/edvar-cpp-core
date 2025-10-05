@@ -8,10 +8,15 @@ class EdvarCppCore : ModuleBase
 {
 
     [ModuleOption(ChangesResultBinary = true,
-    Description = "Sets the CPU extension to use for this module. If true the math will use SSE4.2 instructions.If false will use SSE2 instructions.\n" +
+    Description = "Sets the CPU extension to use SSE4.2 for this module. If true the math will use SSE4.2 instructions.If false will use SSE2 instructions.\n" +
     "Both are available widely according to the \"Steam Hardware & Software Survey: September 2025\". SSE2 : 99.94%, SSE4.2: 99.78%",
     Name = "UseSSE4_2")]
     bool UseSSE4_2 = true;
+    [ModuleOption(ChangesResultBinary = true,
+    Description = "Sets the CPU extension to use AVX2 for this module. If true the math will use AVX2 instructions. If false will use SSE4.2 instructions.\n" +
+    "Both are available widely according to the \"Steam Hardware & Software Survey: September 2025\". SSE4.2 : 99.78%, AVX2: 95.03%",
+    Name = "UseAVX2")]
+    bool UseAVX2 = false;
 
     public EdvarCppCore(ModuleContext context) : base(context)
     {
@@ -27,6 +32,12 @@ class EdvarCppCore : ModuleBase
         {
             this.Definitions.Public.Add("EDVAR_CPP_CORE_USE_SSE4_2=1");
             this.CPUExtension = CPUExtensions.SSE4_2;
+        }
+        else if (UseAVX2)
+        {
+            this.Definitions.Public.Add("EDVAR_CPP_CORE_USE_SSE4_2=1");
+            this.Definitions.Public.Add("EDVAR_CPP_CORE_USE_AVX2=1");
+            this.CPUExtension = CPUExtensions.AVX2;
         }
         else
         {
