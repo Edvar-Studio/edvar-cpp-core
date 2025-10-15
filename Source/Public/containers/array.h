@@ -10,19 +10,19 @@ namespace edvar::container {
 // Also they should preferably be move-assignable for best performance. Throw is already disabled for this library.
 template <typename in_type>
 inline constexpr bool can_store_in_array =
-    edvar::meta::is_destructible<in_type> &&
-    (edvar::meta::is_move_constructible<in_type> || edvar::meta::is_copy_constructible<in_type>);
+    std::is_destructible_v<in_type> &&
+    (std::is_move_constructible_v<in_type> || std::is_copy_constructible_v<in_type>);
 
 template <typename storage_type, typename allocator_type> class array {
 public:
-    static_assert(edvar::meta::is_destructible<storage_type>,
+    static_assert(std::is_destructible_v<storage_type>,
                   "Type stored in edvar::container::array must be destructible");
-    static_assert(edvar::meta::is_move_constructible<storage_type> || edvar::meta::is_copy_constructible<storage_type>,
+    static_assert(std::is_move_constructible_v<storage_type> || std::is_copy_constructible_v<storage_type>,
                   "Type stored in edvar::container::array must be either move-constructible or copy-constructible");
 
     typedef value_or_error_code<int32> indexed_result;
     array();
-    array(storage_type* elems, uint32 size);
+    array(std::remove_reference_t<storage_type>* elems, uint32 size);
     array(const array& other);
     array(const std::initializer_list<storage_type>& init_list);
     array(array&& other) noexcept;
@@ -44,13 +44,13 @@ public:
      * when adding or removing elements.
      * @returns Pointer to the internal data array.
      */
-    inline storage_type* data() { return _data; }
+    inline std::remove_reference_t<storage_type>* data() { return _data; }
     /**
      * Get a const pointer to the internal data array. This pointer may be invalidated
      * when adding or removing elements.
      * @returns Const pointer to the internal data array.
      */
-    inline const storage_type* data() const { return _data; }
+    inline const std::remove_reference_t<storage_type>* data() const { return _data; }
     /**
      * Check if the array is empty (length is zero).
      * @returns True if the array is empty, false otherwise.
@@ -137,7 +137,7 @@ public:
      * @param in_array Pointer to the raw array containing elements to append.
      * @param element_count Number of elements in the raw array.
      */
-    void append(storage_type* in_array, uint32 element_count);
+    void append(std::remove_reference_t<storage_type>* in_array, uint32 element_count);
     /**
      * Append elements from an array view to this array.
      * @param view The array view containing elements to append.
@@ -161,7 +161,7 @@ public:
      * @param value The value to add.
      * @returns The index of the newly added element.
      */
-    template <typename = edvar::meta::enable_if<edvar::meta::is_copy_constructible<storage_type>>>
+    template <std::enable_if_t<std::is_copy_constructible_v<storage_type>, bool> = true>
     int32 add(const storage_type& value);
     /**
      * Add an element to the end of the array by move-constructing it.
@@ -169,8 +169,8 @@ public:
      * @param value The value to add.
      * @returns The index of the newly added element.
      */
-    template <typename = edvar::meta::enable_if<edvar::meta::is_move_constructible<storage_type>>>
-    int32 add(storage_type&& value);
+    template <std::enable_if_t<std::is_move_constructible_v<storage_type>, bool> = true>
+    int32 add(std::remove_cvref_t<storage_type>&& value);
 
     /**
      * Construct and add an element to the end of the array in place.
@@ -283,7 +283,7 @@ public:
 
 private:
     allocator_type _allocator;
-    storage_type* _data;
+    std::remove_reference_t<storage_type>* _data;
     int32 _size;
     int32 _capacity;
 };
@@ -360,7 +360,7 @@ inline storage_type array<storage_type, allocator_type>::remove_at_value(int32 i
     // destroy source and shift remaining
     _data[uindex].~storage_type();
     for (uint32 i = uindex; i < static_cast<uint32>(_size) - 1; ++i) {
-        if constexpr (edvar::meta::is_nothrow_move_assignable<storage_type>) {
+        if constexpr (std::is_nothrow_move_assignable_v<storage_type>) {
             _data[i] = edvar::move(_data[i + 1]);
             _data[i + 1].~storage_type();
         } else {
@@ -379,7 +379,7 @@ inline void array<storage_type, allocator_type>::remove_at(int32 index) {
     // destroy the element and shift subsequent elements down; prefer move-assignment
     _data[uindex].~storage_type();
     for (uint32 i = uindex; i < static_cast<uint32>(_size) - 1; ++i) {
-        if constexpr (edvar::meta::is_nothrow_move_assignable<storage_type>) {
+        if constexpr (std::is_nothrow_move_assignable_v<storage_type>) {
             _data[i] = edvar::move(_data[i + 1]);
             _data[i + 1].~storage_type();
         } else {
@@ -398,8 +398,8 @@ inline void array<storage_type, allocator_type>::insert(int32 index, const stora
     new (&_data[_size]) storage_type(edvar::move(_data[_size - 1]));
     // shift elements up; prefer noexcept move-assignment when available
     for (uint32 i = static_cast<uint32>(_size) - 1; i > static_cast<uint32>(index); --i) {
-        if constexpr (edvar::meta::is_nothrow_move_assignable<storage_type> ||
-                      edvar::meta::is_move_assignable<storage_type>) {
+        if constexpr (std::is_nothrow_move_assignable_v<storage_type> ||
+                      std::is_move_assignable_v<storage_type>) {
             // if there is noexcept move-assignment, use it
             _data[i] = edvar::move(_data[i - 1]);
         } else {
@@ -408,7 +408,7 @@ inline void array<storage_type, allocator_type>::insert(int32 index, const stora
             _data[i - 1].~storage_type();
         }
     }
-    if constexpr (edvar::meta::is_nothrow_move_assignable<storage_type>) {
+    if constexpr (std::is_nothrow_move_assignable_v<storage_type>) {
         _data[index] = value;
     } else {
         new (&_data[index]) storage_type(value);
@@ -442,8 +442,8 @@ inline int32 array<storage_type, allocator_type>::emplace(Args&&... args) {
 }
 
 template <typename storage_type, typename allocator_type>
-template <typename>
-inline int32 array<storage_type, allocator_type>::add(storage_type&& value) {
+template <std::enable_if_t<std::is_move_constructible_v<storage_type>, bool>>
+inline int32 array<storage_type, allocator_type>::add(std::remove_cvref_t<storage_type>&& value) {
     ensure_capacity(static_cast<uint32>(_size) + 1);
     // placement-new move-construct in place
     new (&_data[_size]) storage_type(edvar::move(value));
@@ -452,7 +452,7 @@ inline int32 array<storage_type, allocator_type>::add(storage_type&& value) {
 }
 
 template <typename storage_type, typename allocator_type>
-template <typename>
+template <std::enable_if_t<std::is_copy_constructible_v<storage_type>, bool>>
 inline int32 array<storage_type, allocator_type>::add(const storage_type& value) {
     ensure_capacity(static_cast<uint32>(_size) + 1);
     // placement-new copy-construct in place
@@ -462,7 +462,7 @@ inline int32 array<storage_type, allocator_type>::add(const storage_type& value)
 }
 
 template <typename storage_type, typename allocator_type>
-inline void array<storage_type, allocator_type>::append(storage_type* in_array, uint32 element_count) {
+inline void array<storage_type, allocator_type>::append(std::remove_reference_t<storage_type>* in_array, uint32 element_count) {
     ensure_capacity(_size + element_count);
     for (uint32 i = 0; i < element_count; ++i) {
         new (&_data[_size]) storage_type(in_array[i]);

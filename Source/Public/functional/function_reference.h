@@ -1,5 +1,7 @@
 #pragma once
 #include "containers/tuple.h"
+#include "containers/map.h"
+#include "diagnostics/assertion.h"
 #include "memory/smart_pointers.h"
 
 namespace edvar {
@@ -209,7 +211,7 @@ public:
     }
 
     template <typename object_type>
-    static function_reference make_from_object_pointer(object_type* object_value,
+    static function_reference make_from_raw_pointer(object_type* object_value,
                                                        return_value_type (object_type::*func)(args...)) {
         function_reference to_return;
         to_return._implementation =
@@ -219,7 +221,7 @@ public:
     }
 
     template <typename object_type>
-    static function_reference make_from_object_pointer(const object_type* object_value,
+    static function_reference make_from_raw_pointer(const object_type* object_value,
                                                        return_value_type (object_type::*func)(args...) const) {
         function_reference to_return;
         to_return._implementation =
@@ -229,9 +231,84 @@ public:
         return to_return;
     }
 
+    return_value_type operator()(const args&... arguments) const {
+        edvar::diagnostics::check(is_bound(), L"attempting to call unbound function reference");
+        if constexpr (std::is_void_v<return_value_type>) {
+            static_cast<__private::typed_function_reference_impl<return_value_type, args...>*>(
+                _implementation.get_unsafe())
+                ->invoke(arguments...);
+            return;
+        } else {
+            return static_cast<__private::typed_function_reference_impl<return_value_type, args...>*>(
+                       _implementation.get_unsafe())
+                ->invoke(arguments...);
+        }
+    }
+
+    bool is_bound() const { return _implementation.is_valid() && _implementation->is_bound(); }
+
 private:
     function_reference() = default;
 
     memory::shared_pointer<__private::typed_function_reference_impl<return_value_type, args...>> _implementation;
+};
+
+struct function_reference_array_handle {
+    uint32 id;
+};
+
+template <typename... args> class function_reference_array {
+public:
+    function_reference_array() = default;
+    ~function_reference_array() = default;
+
+    function_reference_array_handle add(const function_reference<void, args...>& func) {
+        function_reference_array_handle h = _handle_manager.allocate_handle();
+        _handle_manager.handle_map.insert(h, func);
+        return h;
+    }
+    void remove(function_reference_array_handle h) {
+        if (_handle_manager.is_handle_valid(h)) {
+            _handle_manager.free_handle(h);
+        }
+    }
+
+    bool is_empty() const { return _handle_manager.is_empty(); }
+    bool is_handle_valid(function_reference_array_handle h) const { return _handle_manager.is_handle_valid(h); }
+
+    void invoke_all(const args&&... arguments) {
+        for (const pair<function_reference_array_handle, function_reference<void, args...>>& p :
+             _handle_manager.handle_map) {
+            function_reference<void, args...> function_to_call = p.value();
+            if (function_to_call.is_bound()) {
+                function_to_call(arguments...);
+            }
+        }
+    }
+
+private:
+    struct handle_manager {
+        container::map<function_reference_array_handle, function_reference<void, args...>> handle_map;
+        uint32 _next_id = 1;
+        // probably won't ever reach this many, but just in case
+        static constexpr uint32 MAX_ID = 0xFFFFF000;
+
+        function_reference_array_handle allocate_handle() {
+            // make sure handle id is unique
+            while (handle_map.contains(_next_id) && _next_id != 0 && _next_id <= MAX_ID) {
+                ++_next_id;
+            }
+            edvar::diagnostics::check(_next_id != 0 && _next_id <= MAX_ID,
+                                      L"ran out of function reference array handles");
+            function_reference_array_handle to_return{_next_id};
+            ++_next_id;
+            return to_return;
+        }
+        void free_handle(function_reference_array_handle h) { handle_map.remove(h); }
+
+        bool is_handle_valid(function_reference_array_handle h) const { return handle_map.contains(h); }
+
+        bool is_empty() const { return handle_map.is_empty(); }
+    } _handle_manager;
 };
 } // namespace edvar

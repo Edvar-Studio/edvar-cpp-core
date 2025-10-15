@@ -1,79 +1,97 @@
 #pragma once
-#include "math/simd_support.h"
 
 namespace edvar::math {
-struct matrix4x4d;
-struct vector3d;
+template <typename type> struct quaternion {
+    using simd_type = meta::conditional_type<meta::is_same_type<type, double>, simd::simd_256d, simd::simd_128f>;
+    quaternion() : x(0), y(0), z(0), w(1) {}
+    quaternion(type all) : x(all), y(all), z(all), w(all) {}
+    quaternion(type x, type y, type z, type w) : x(x), y(y), z(z), w(w) {}
+    quaternion(const type* to_place_data) : x(to_place_data[0]), y(to_place_data[1]), z(to_place_data[2]), w(to_place_data[3]) {}
+    quaternion(const std::initializer_list<type>& list) {
+        auto it = list.begin();
+        x = (it != list.end()) ? *it++ : type(0);
+        y = (it != list.end()) ? *it++ : type(0);
+        z = (it != list.end()) ? *it++ : type(0);
+        w = (it != list.end()) ? *it++ : type(1);
+    }
+    ~quaternion() = default;
+    quaternion(const quaternion& other) : x(other.x), y(other.y), z(other.z), w(other.w) {}
+    quaternion(quaternion&& other) noexcept
+        : x(edvar::move(other.x)), y(edvar::move(other.y)), z(edvar::move(other.z)), w(edvar::move(other.w)) {}
+    quaternion& operator=(const quaternion& rhs) {
+        if (this != &rhs) {
+            x = rhs.x;
+            y = rhs.y;
+            z = rhs.z;
+            w = rhs.w;
+        }
+        return *this;
+    }
+    quaternion& operator=(quaternion&& rhs) noexcept {
+        if (this != &rhs) {
+            x = edvar::move(rhs.x);
+            y = edvar::move(rhs.y);
+            z = edvar::move(rhs.z);
+            w = edvar::move(rhs.w);
+        }
+        return *this;
+    }
+    quaternion& operator=(const type* to_place_data) {
+        x = to_place_data[0];
+        y = to_place_data[1];
+        z = to_place_data[2];
+        w = to_place_data[3];
+        return *this;
+    }
+    quaternion& operator=(const std::initializer_list<type>& list) {
+        auto it = list.begin();
+        x = (it != list.end()) ? *it++ : type(0);
+        y = (it != list.end()) ? *it++ : type(0);
+        z = (it != list.end()) ? *it++ : type(0);
+        w = (it != list.end()) ? *it++ : type(1);
+        return *this;
+    }
 
-struct quaterniond {
+    
+    // operators
+    quaternion& operator+=(const quaternion& rhs) {
+        x += rhs.x;
+        y += rhs.y;
+        z += rhs.z;
+        w += rhs.w;
+        return *this;
+    }
+    quaternion& operator-=(const quaternion& rhs) {
+        x -= rhs.x;
+        y -= rhs.y;
+        z -= rhs.z;
+        w -= rhs.w;
+        return *this;
+    }
+    quaternion& operator*=(const quaternion& rhs) {
+        const type new_x = w * rhs.x + x * rhs.w + y * rhs.z - z * rhs.y;
+        const type new_y = w * rhs.y - x * rhs.z + y * rhs.w + z * rhs.x;
+        const type new_z = w * rhs.z + x * rhs.y - y * rhs.x + z * rhs.w;
+        const type new_w = w * rhs.w - x * rhs.x - y * rhs.y - z * rhs.z;
+        x = new_x;
+        y = new_y;
+        z = new_z;
+        w = new_w;
+        return *this;
+    }
 
-    quaterniond();
-    quaterniond(const double all);
-    quaterniond(const double x, const double y, const double z, const double w);
-    quaterniond(const simd::simd_256d& xyzw_simd);
-    quaterniond(const double* to_place_data);
-    quaterniond(const std::initializer_list<double>& list);
-    ~quaterniond();
 
-    quaterniond(const quaterniond& other);
-    quaterniond(quaterniond&& other) noexcept;
 
-    quaterniond& operator=(const quaterniond& rhs);
-    quaterniond& operator=(quaterniond&& rhs) noexcept;
 
-    quaterniond operator+(const quaterniond& rhs) const;
-    quaterniond& operator+=(const quaterniond& rhs);
 
-    quaterniond operator-(const quaterniond& rhs) const;
-    quaterniond& operator-=(const quaterniond& rhs);
 
-    quaterniond operator*(const quaterniond& rhs) const;
-    quaterniond& operator*=(const quaterniond& rhs);
-
-    quaterniond operator*(const double rhs) const;
-    quaterniond& operator*=(const double rhs);
-
-    quaterniond operator/(const double rhs) const;
-    quaterniond& operator/=(const double rhs);
-
-    inline quaterniond operator-() const { return negate(); }
-    bool operator==(const quaterniond& rhs) const;
-    bool operator!=(const quaterniond& rhs) const;
-
-    inline double& operator[](uint32 index) { return this->_data[index]; }
-    inline const double& operator[](uint32 index) const { return this->_data[index]; }
-
-    double length() const;
-    double length_squared() const;
-    quaterniond normalized() const;
-    quaterniond& normalize_inline();
-    quaterniond conjugate() const;
-    quaterniond inverse() const;
-    quaterniond& inverse_inline();
-    quaterniond negate() const;
-    quaterniond& negate_inline();
-
-    matrix4x4d to_rotation_matrix() const;
-
-    static quaterniond identity();
-
-    static quaterniond from_rotation_matrix(const matrix4x4d& mat);
-
-    inline const double& x() const { return _data[0]; }
-    inline const double& y() const { return _data[1]; }
-    inline const double& z() const { return _data[2]; }
-    inline const double& w() const { return _data[3]; }
-
-private:
-    union alignas(32) {
-        simd::simd_256d _xyzw;
-        double _data[4];
+    union {
+        type data[4];
         struct {
-            double _x;
-            double _y;
-            double _z;
-            double _w;
+            type x, y, z, w;
         };
+        simd_type simd_data;
     };
 };
+
 } // namespace edvar::math

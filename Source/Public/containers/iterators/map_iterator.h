@@ -5,9 +5,9 @@ namespace edvar::container::iterator {
 template <typename map_type, bool is_const> class map_iterator {
 public:
     using pair_type = typename map_type::pair_type;
-    using data_type = edvar::meta::conditional_type<is_const, const map_type*, map_type*>;
-    using pair_ref = edvar::meta::conditional_type<is_const, const pair_type&, pair_type&>;
-    using pair_ptr = edvar::meta::conditional_type<is_const, const pair_type*, pair_type*>;
+    using data_type = std::conditional_t<is_const, const map_type*, map_type*>;
+    using pair_ref = std::conditional_t<is_const, const pair_type&, pair_type&>;
+    using pair_ptr = std::conditional_t<is_const, const pair_type*, pair_type*>;
 
     map_iterator();
     map_iterator(const map_type& m);
@@ -34,9 +34,9 @@ public:
     bool operator!=(const map_iterator& other) const { return !(*this == other); }
 
     // modification helpers available only for non-const iterators
-    edvar::meta::enable_if<!is_const, map_iterator&> replace(const pair_type& p);
-    edvar::meta::enable_if<!is_const, map_iterator&> replace(pair_type&& p);
-    edvar::meta::enable_if<!is_const, map_iterator&> remove();
+    std::enable_if_t<!is_const, map_iterator&> replace(const pair_type& p);
+    std::enable_if_t<!is_const, map_iterator&> replace(pair_type&& p);
+    std::enable_if_t<!is_const, map_iterator&> remove();
 
 private:
     data_type _map;
@@ -277,7 +277,7 @@ inline bool map_iterator<map_type, is_const>::operator==(const map_iterator& oth
 }
 
 template <typename map_type, bool is_const>
-inline edvar::meta::enable_if<!is_const, map_iterator<map_type, is_const>&>
+inline std::enable_if_t<!is_const, map_iterator<map_type, is_const>&>
 map_iterator<map_type, is_const>::replace(const pair_type& p) {
     if (_map && _bucket_index < static_cast<uint32>(_map->_buckets.length())) {
         auto& bucket = _map->_buckets[_bucket_index];
@@ -287,7 +287,7 @@ map_iterator<map_type, is_const>::replace(const pair_type& p) {
 }
 
 template <typename map_type, bool is_const>
-inline edvar::meta::enable_if<!is_const, map_iterator<map_type, is_const>&>
+inline std::enable_if_t<!is_const, map_iterator<map_type, is_const>&>
 map_iterator<map_type, is_const>::replace(pair_type&& p) {
     if (_map && _bucket_index < static_cast<uint32>(_map->_buckets.length())) {
         auto& bucket = _map->_buckets[_bucket_index];
@@ -297,7 +297,7 @@ map_iterator<map_type, is_const>::replace(pair_type&& p) {
 }
 
 template <typename map_type, bool is_const>
-inline edvar::meta::enable_if<!is_const, map_iterator<map_type, is_const>&> map_iterator<map_type, is_const>::remove() {
+inline std::enable_if_t<!is_const, map_iterator<map_type, is_const>&> map_iterator<map_type, is_const>::remove() {
     if (!_map)
         return *this;
     if (_bucket_index >= static_cast<uint32>(_map->_buckets.length()))

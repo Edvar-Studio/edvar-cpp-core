@@ -2,72 +2,196 @@
 #include "math/simd_support.h"
 
 namespace edvar::math {
-struct vector3d;
-struct quaternion;
 
-struct matrix4x4d {
-    matrix4x4d();
-    matrix4x4d(const double all);
-    matrix4x4d(const double& r0_c0, const double& r0_c1, const double& r0_c2, const double& r0_c3, const double& r1_c0,
-               const double& r1_c1, const double& r1_c2, const double& r1_c3, const double& r2_c0, const double& r2_c1,
-               const double& r2_c2, const double& r2_c3, const double& r3_c0, const double& r3_c1, const double& r3_c2,
-               const double& r3_c3);
-    matrix4x4d(const vector3d& row0, const vector3d& row1, const vector3d& row2, const vector3d& row3);
-    matrix4x4d(const std::initializer_list<double>& list);
-    matrix4x4d(double const* const* to_place_data);
-    matrix4x4d(double const* to_place_data);
+template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
+    using value_type = typename simd::meta::simd_traits<simd_type>::element_type;
+    static constexpr uint32 simd_width = simd::meta::simd_traits<simd_type>::element_count;
+    static_assert(simd::meta::simd_traits<simd_type>::is_simd);
 
-    matrix4x4d(const matrix4x4d& other);
-    matrix4x4d(matrix4x4d&& other) noexcept;
-    matrix4x4d& operator=(const matrix4x4d& rhs);
-    matrix4x4d& operator=(matrix4x4d&& rhs) noexcept;
+    static_assert(simd_width >= rows || simd_width >= cols,
+                  "At least one dimension must fit in a single SIMD register");
+    static constexpr bool is_row_major = (simd_width >= cols);
+    static constexpr size_t simd_rows = is_row_major ? (rows + simd_width - 1) / simd_width : rows;
+    static constexpr size_t simd_cols = is_row_major ? cols : (cols + simd_width - 1) / simd_width;
 
-    ~matrix4x4d();
-
-    static matrix4x4d identity();
-    static matrix4x4d zero();
-
-    matrix4x4d operator+(const matrix4x4d& rhs) const;
-    matrix4x4d& operator+=(const matrix4x4d& rhs);
-    matrix4x4d operator-(const matrix4x4d& rhs) const;
-    matrix4x4d& operator-=(const matrix4x4d& rhs);
-    matrix4x4d operator*(const matrix4x4d& rhs) const;
-    matrix4x4d& operator*=(const matrix4x4d& rhs);
-    matrix4x4d operator*(const double rhs) const;
-    matrix4x4d& operator*=(const double rhs);
-    matrix4x4d operator*(const vector3d& rhs) const;
-    matrix4x4d& operator*=(const vector3d& rhs);
-    matrix4x4d operator/(const double rhs) const;
-    matrix4x4d& operator/=(const double rhs);
-
-    inline double& operator()(uint32 row, uint32 col) { return this->data[row][col]; }
-    inline const double& operator()(uint32 row, uint32 col) const { return this->data[row][col]; }
-
-    bool operator==(const matrix4x4d& rhs) const;
-    inline bool operator!=(const matrix4x4d& rhs) const { return !(*this == rhs); }
-
-    matrix4x4d transpose() const;
-    matrix4x4d& transpose_inline();
-
-    double determinant() const;
-
-    matrix4x4d inverse() const;
-    matrix4x4d& inverse_inline();
-
-    static matrix4x4d create_view_matrix(const vector3d& position, const vector3d& forward, const vector3d& up);
-    static matrix4x4d create_perspective_projection_matrix(const double fov_y, const double aspect_ratio,
-                                                           const double near_plane, const double far_plane);
-    static matrix4x4d create_orthographic_projection_matrix(const double left, const double right, const double bottom,
-                                                            const double top, const double near_plane,
-                                                            const double far_plane);
-    static matrix4x4d create_inverse_view_matrix(const vector3d& position, const vector3d& forward, const vector3d& up);
-
-private:
     union {
-        // row-major 4x4 matrix stored as 4 rows of 2 simd_128d each
-        simd::simd_128d simd_data[8];
-        // row-major access
-        double data[4][4];
+        simd_type simd_data[simd_rows][simd_cols];
+        value_type data[rows][cols];
+        value_type flat_data[rows * cols];
     };
+
+    matrix() = default;
+    explicit matrix(value_type diagonal) {
+        for (size_t r = 0; r < rows; ++r) {
+            for (size_t c = 0; c < cols; ++c) {
+                data[r][c] = (r == c) ? diagonal : value_type(0);
+            }
+        }
+    }
+    explicit matrix(const value_type* values) {
+        for (size_t r = 0; r < rows; ++r) {
+            for (size_t c = 0; c < cols; ++c) {
+                data[r][c] = values[r * cols + c];
+            }
+        }
+    }
+    matrix(const matrix& other) : simd_data(other.simd_data) {}
+    matrix(matrix&& other) noexcept : simd_data(edvar::move(other.simd_data)) {}
+    matrix(const simd_type& other) : simd_data(other) {}
+
+    matrix& operator=(const matrix& other) {
+        if (this != &other) {
+            simd_data = other.simd_data;
+        }
+        return *this;
+    }
+    matrix& operator=(matrix&& other) noexcept {
+        if (this != &other) {
+            simd_data = edvar::move(other.simd_data);
+        }
+        return *this;
+    }
+
+    value_type& operator()(const uint32 row, const uint32 col) { return data[row][col]; }
+    const value_type& operator()(const uint32 row, const uint32 col) const { return data[row][col]; }
+
+    template <typename new_type> matrix<new_type, rows, cols> convert_to() const {
+        matrix<new_type, rows, cols> result;
+        for (uint32 i_simd_rows = 0; i_simd_rows < simd_rows; ++i_simd_rows) {
+            for (uint32 i_simd_cols = 0; i_simd_cols < simd_cols; ++i_simd_cols) {
+                result.simd_data[i_simd_rows][i_simd_cols] =
+                    simd_data[i_simd_rows][i_simd_cols].template convert_to<new_type>();
+            }
+        }
+        return result;
+    }
+    // matrix to matrix operations
+    template <typename other_type, uint32 other_rows, uint32 other_cols>
+    matrix<simd_type, rows, other_cols>& operator*=(const matrix<other_type, other_rows, other_cols>& other) {
+        static_assert(cols == other_rows, "Incompatible matrix dimensions for multiplication");
+        if constexpr (edvar::meta::is_same_type<simd_type, other_type>()) {
+            matrix<other_type, other_rows, other_cols> transposed_other = other.transposed();
+            simd_type::matrix_multiply<rows, cols, other_rows, other_cols>(simd_data, transposed_other.simd_data,
+                                                                           simd_data);
+        } else {
+            matrix<simd_type, other_rows, other_cols> converted_other = other.template convert_to<simd_type>();
+            matrix<simd_type, other_rows, other_cols> transposed_other = converted_other.transposed();
+            simd_type::matrix_multiply<rows, cols, other_rows, other_cols>(simd_data, transposed_other.simd_data,
+                                                                           simd_data);
+        }
+        return *this;
+    }
+
+    template <typename other_type, uint32 other_rows, uint32 other_cols>
+    matrix<simd_type, rows, other_cols> operator*(const matrix<other_type, other_rows, other_cols>& other) const {
+        return matrix<simd_type, rows, other_cols>(*this) *= other;
+    }
+    template <typename other_type> matrix& operator+=(const matrix<other_type, rows, cols>& other) {
+        if constexpr (edvar::meta::is_same_type<simd_type, other_type>()) {
+            for (uint32 r = 0; r < simd_rows; ++r) {
+                for (uint32 c = 0; c < simd_cols; ++c) {
+                    simd_data[r][c] += other.simd_data[r][c];
+                }
+            }
+        } else {
+            matrix<simd_type, rows, cols> converted_other = other.template convert_to<simd_type>();
+            for (uint32 r = 0; r < simd_rows; ++r) {
+                for (uint32 c = 0; c < simd_cols; ++c) {
+                    simd_data[r][c] += converted_other.simd_data[r][c];
+                }
+            }
+        }
+        return *this;
+    }
+    template <typename other_type> matrix operator+(const matrix<other_type, rows, cols>& other) const{
+        return matrix(*this) += other;
+    }
+
+    template<typename other_type> matrix operator-=(const matrix<other_type, rows, cols>& other) {
+        if constexpr (edvar::meta::is_same_type<simd_type, other_type>()) {
+            for (uint32 r = 0; r < simd_rows; ++r) {
+                for (uint32 c = 0; c < simd_cols; ++c) {
+                    simd_data[r][c] -= other.simd_data[r][c];
+                }
+            }
+        } else {
+            matrix<simd_type, rows, cols> converted_other = other.template convert_to<simd_type>();
+            for (uint32 r = 0; r < simd_rows; ++r) {
+                for (uint32 c = 0; c < simd_cols; ++c) {
+                    simd_data[r][c] -= converted_other.simd_data[r][c];
+                }
+            }
+        }
+        return *this;
+    }
+    template<typename other_type> matrix operator-(const matrix<other_type, rows, cols>& other) const{
+        return matrix(*this) -= other;
+    }
+
+    // scalar operations
+    matrix& operator+=(const value_type scalar) {
+        simd_type simd_scalar(scalar);
+        for (uint32 r = 0; r < simd_rows; ++r) {
+            for (uint32 c = 0; c < simd_cols; ++c) {
+                simd_data[r][c] += simd_scalar;
+            }
+        }
+        return *this;
+    }
+    matrix operator+(const value_type scalar) const { return matrix(*this) += scalar; }
+    matrix& operator-=(const value_type scalar) {
+        simd_type simd_scalar(scalar);
+        for (uint32 r = 0; r < simd_rows; ++r) {
+            for (uint32 c = 0; c < simd_cols; ++c) {
+                simd_data[r][c] -= simd_scalar;
+            }
+        }
+        return *this;
+    }
+    matrix operator-(const value_type scalar) const { return matrix(*this) -= scalar; }
+    matrix& operator*=(const value_type scalar) {
+        simd_type simd_scalar(scalar);
+        for (uint32 r = 0; r < simd_rows; ++r) {
+            for (uint32 c = 0; c < simd_cols; ++c) {
+                simd_data[r][c] *= simd_scalar;
+            }
+        }
+        return *this;
+    }
+    matrix operator*(const value_type scalar) const { return matrix(*this) *= scalar; }
+    matrix& operator/=(const value_type scalar) {
+        simd_type simd_scalar(scalar);
+        for (uint32 r = 0; r < simd_rows; ++r) {
+            for (uint32 c = 0; c < simd_cols; ++c) {
+                simd_data[r][c] /= simd_scalar;
+            }
+        }
+        return *this;
+    }
+    matrix operator/(const value_type scalar) const { return matrix(*this) /= scalar; }
+
+    matrix transposed() const {
+        matrix result = *this;
+        result.transpose_inline();
+        return result;
+    }
+
+    matrix& transpose_inline() {
+        for (uint32 r = 0; r < rows; ++r) {
+            for (uint32 c = r + 1; c < cols; ++c) {
+                edvar::swap(data[r][c], data[c][r]);
+            }
+        }
+        return *this;
+    }
+
+
+    matrix& invert_inline(){
+
+    }
 };
+
+using matrix4f = matrix<simd::simd_128f, 4, 4>;
+using matrix4d = matrix<simd::simd_256d, 4, 4>;
+
 } // namespace edvar::math

@@ -6,9 +6,9 @@
 #include "platform/windows/windows_platform.h" // IWYU pragma: keep
 
 #ifdef _MSVC_LANG
-#    define NOOP __noop()
+#    define NOOP() __noop()
 #else
-#    define NOOP (void)0
+#    define NOOP() (void)0
 #endif
 
 namespace edvar {
@@ -31,5 +31,7 @@ void platform_base::on_fatal(const wchar_t* message) {
     exit(-1);
 }
 
-void platform_base::get_stack_trace(int skip_count, int count) { NOOP; }
+edvar::string_base<char_utf16> platform_base::get_stack_trace(int skip_count, int count) { return edvar::string_base<char_utf16>(
+    "Getting stack trace is not supported on this platform."
+); }
 } // namespace edvar

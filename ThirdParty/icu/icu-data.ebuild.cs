@@ -90,14 +90,14 @@ public class IcuData : ModuleBase
             {
                 toLinkFile = Path.Join(context.ModuleDirectory.FullName, "Binaries", "icudt", "default", "libicudt77" + context.Platform.ExtensionForStaticLibrary);
             }
-            this.Libraries.Add(toLinkFile);
+            this.Libraries.Public.Add(toLinkFile);
         }
-        var ebuildPath = typeof(ModuleBase).Assembly.Location.Replace("ebuild.api.dll", "ebuild.dll");
         if (File.Exists(toLinkFile))
         {
             // already built, nothing to do.
             return;
         }
+        var ebuildPath = typeof(ModuleBase).Assembly.Location.Replace("ebuild.api.dll", "ebuild.dll");
         // If these are not added to prebuild steps like this. The generation or other steps might take too much time.
         this.PreBuildSteps.Add(new ModuleBuildStep("Build icupkg", (workerType, cancellationToken) =>
         {

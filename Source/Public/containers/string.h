@@ -1,9 +1,10 @@
 #pragma once
 #include "./array.h" // IWYU pragma: keep
+#include "platform/basic_types.h"
 
 namespace edvar {
 namespace c_string {
-template <typename character_type, typename = edvar::meta::enable_if<edvar::meta::is_character<character_type>>>
+template <typename character_type, typename = std::enable_if_t<edvar::meta::is_character_v<character_type>>>
 inline uint32 string_length(const character_type* str) {
     uint32 length = 0;
     while (str[length] != 0) {
@@ -40,8 +41,8 @@ bool is_whitespace(char_utf32 ch);
 
 template <typename character_type = char_utf16, bool is_const = false> class iterator {
 public:
-    using data_type = edvar::meta::conditional_type<is_const, const character_type*, character_type*>;
-    using data_ref_type = edvar::meta::conditional_type<is_const, const character_type&, character_type&>;
+    using data_type = std::conditional_t<is_const, const character_type*, character_type*>;
+    using data_ref_type = std::conditional_t<is_const, const character_type&, character_type&>;
 
     iterator(character_type* start, uint32 length) : _data(start), _length(length), _current_index(0) {}
     iterator(character_type* start) : _data(start), _length(edvar::c_string::string_length(start)), _current_index(0) {}
@@ -83,7 +84,7 @@ public:
         }
     }
 
-    edvar::meta::enable_if<!is_const, iterator&> replace(const character_type& value) {
+    std::enable_if_t<!is_const, iterator&> replace(const character_type& value) {
         _data[_current_index] = value;
         return *this;
     }
@@ -249,17 +250,111 @@ public:
     }
     ~string_base() { _data.empty(); }
 
-    string_base(const character_type* str) {
-        if (str) {
-            uint32 length = edvar::c_string::string_length(str);
+    string_base(nullptr_t) {
+        _data.add(0); // null terminator
+    }
+    string_base(const char* c_str) {
+        if (c_str) {
+            char_utf16* as_utf16 = c_string::create_utf16(reinterpret_cast<const char_utf8*>(c_str));
+            if (as_utf16) {
+                uint32 length = edvar::c_string::string_length(as_utf16);
+                _data.ensure_capacity(length + 1);
+                _data.add_uninitialized(length + 1);
+                edvar::memory::copy<character_type>(_data.data(), as_utf16, length);
+                _data.data()[length] = 0; // null terminator
+                delete[] as_utf16;
+            } else {
+                _data.add(0); // null terminator
+            }
+        } else {
+            _data.add(0); // null terminator
+        }
+    }
+
+    string_base(const char_utf8* utf8_str) {
+        if (utf8_str) {
+            char_utf16* as_utf16 = c_string::create_utf16(utf8_str);
+            if (as_utf16) {
+                uint32 length = edvar::c_string::string_length(as_utf16);
+                _data.ensure_capacity(length + 1);
+                _data.add_uninitialized(length + 1);
+                edvar::memory::copy<character_type>(_data.data(), as_utf16, length);
+                _data.data()[length] = 0; // null terminator
+                delete[] as_utf16;
+            } else {
+                _data.add(0); // null terminator
+            }
+        } else {
+            _data.add(0); // null terminator
+        }
+    }
+
+    string_base(const char_utf16* utf16_str) {
+        if (utf16_str) {
+            uint32 length = edvar::c_string::string_length(utf16_str);
             _data.ensure_capacity(length + 1);
             _data.add_uninitialized(length + 1);
-            edvar::memory::copy<character_type>(_data.data(), str, length);
+            edvar::memory::copy<character_type>(_data.data(), utf16_str, length);
             _data.data()[length] = 0; // null terminator
         } else {
             _data.add(0); // null terminator
         }
     }
+
+    string_base(const char_utf32* utf32_str) {
+        if (utf32_str) {
+            char_utf16* as_utf16 = c_string::create_utf16(utf32_str);
+            if (as_utf16) {
+                uint32 length = edvar::c_string::string_length(as_utf16);
+                _data.ensure_capacity(length + 1);
+                _data.add_uninitialized(length + 1);
+                edvar::memory::copy<character_type>(_data.data(), as_utf16, length);
+                _data.data()[length] = 0; // null terminator
+                delete[] as_utf16;
+            } else {
+                _data.add(0); // null terminator
+            }
+        } else {
+            _data.add(0); // null terminator
+        }
+    }
+
+    string_base(const wchar_t* in_str) {
+        static_assert(sizeof(wchar_t) == sizeof(char_utf16) || sizeof(wchar_t) == sizeof(char_utf32) ||
+                          sizeof(wchar_t) == sizeof(char_utf8),
+                      "wchar_t must be either 16-bit or 32-bit or 8-bit");
+        // convert wchar_t* to char_utf16*
+        // for this if sizeof(wchar_t) == sizeof(char_utf16) we can directly use it
+        if constexpr (sizeof(wchar_t) == sizeof(char_utf16)) {
+            _data.add(reinterpret_cast<const char_utf16*>(in_str), edvar::c_string::string_length(in_str));
+        } else if constexpr (sizeof(wchar_t) == sizeof(char_utf32)) {
+            char_utf16* as_utf16 = c_string::create_utf16(reinterpret_cast<const char_utf32*>(in_str));
+            if (as_utf16) {
+                uint32 length = edvar::c_string::string_length(as_utf16);
+                _data.ensure_capacity(length + 1);
+                _data.add_uninitialized(length + 1);
+                edvar::memory::copy<character_type>(_data.data(), as_utf16, length);
+                _data.data()[length] = 0; // null terminator
+                delete[] as_utf16;
+            } else {
+                _data.add(0); // null terminator
+            }
+        } else if constexpr (sizeof(wchar_t) == sizeof(char_utf8)) {
+            // this doesn't make any sense, why would someone use this but ok.
+            char_utf16* as_utf16 = c_string::create_utf16(reinterpret_cast<const char_utf8*>(in_str));
+            if (as_utf16) {
+                uint32 length = edvar::c_string::string_length(as_utf16);
+                _data.ensure_capacity(length + 1);
+                _data.add_uninitialized(length + 1);
+                edvar::memory::copy<character_type>(_data.data(), as_utf16, length);
+                _data.data()[length] = 0; // null terminator
+                delete[] as_utf16;
+            } else {
+                _data.add(0); // null terminator
+            }
+        }
+    }
+
     string_base(const character_type* str, uint32 length) {
         if (str == nullptr) {
             _data.add(0); // null terminator
@@ -402,7 +497,13 @@ public:
     inline void append(const string_view<character_type>& view) { append(view.data(), view.length()); }
     inline void append(const typename string_view<character_type>::section& section) { append(section.result_view); }
 
-    template <typename... Args> static string_base format(const character_type* format, const Args&&... args) {
+    template <typename... Args> static string_base format(const char* format, const Args&... args) {
+        return format(reinterpret_cast<const character_type*>(format), args...);
+    }
+    template<typename... Args> static string_base format(const wchar_t* format, const Args&... args) {
+        return format(reinterpret_cast<const character_type*>(format), args...);
+    }
+    template <typename... Args> static string_base format(const character_type* format, const Args&... args) {
         string_view<character_type> format_view(format);
         string_base result;
 
@@ -412,7 +513,7 @@ public:
         arg_strings.add_uninitialized(num_args);
 
         int arg_index = 0;
-        ((string_base::to_string_helper(args, arg_strings[arg_index++])), ...);
+        ((string_base::to_string_helper(args, arg_strings[arg_index++])) , ...);
         // parse format string
         for (auto iterator = format_view.begin(); iterator.has_next(); ++iterator) {
             character_type ch = *iterator;
@@ -429,16 +530,28 @@ public:
                 // if next is also {, then it is escaped
                 break;
             }
-            case '}' : {
+            case '}': {
                 break;
             }
             default: {
-                
+
                 break;
             }
             }
         }
         return result;
+    }
+
+    void resize(uint32 new_length) {
+        if (new_length == 0) {
+            clear();
+            return;
+        }
+        if (_data.length() > 0) {
+            _data.remove_at(_data.length() - 1); // remove null terminator
+        }
+        _data.resize(new_length + 1);
+        _data[new_length] = 0; // null terminator
     }
 
     character_type& operator[](uint32 index) { return _data[index]; }
@@ -507,11 +620,6 @@ string_view<character_type>::string_view(const string_base<character_type>& in_s
     _data = in_string_base.data();
     _length = in_string_base.length();
 }
-
-using string_utf32 = string_base<char_utf32>;
-using string_utf16 = string_base<char_utf16>;
-using string_utf8 = string_base<char_utf8>;
-using string = string_base<char_utf8>;
 
 } // namespace edvar
 

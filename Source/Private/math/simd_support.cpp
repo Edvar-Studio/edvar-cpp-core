@@ -146,7 +146,13 @@ simd_128ui simd_128ui::operator-() const {
 
 bool simd_128ui::operator==(const simd_128ui& rhs) const {
     __m128i cmp = _mm_cmpeq_epi32(this->data, rhs.data);
-    return cmp.m128i_i32[0] == -1 && cmp.m128i_i32[1] == -1 && cmp.m128i_i32[2] == -1 && cmp.m128i_i32[3] == -1;
+    union helper {
+        __m128i m;
+        int32 v[4];
+    };
+    helper h;
+    h.m = cmp;
+    return h.v[0] == -1 && h.v[1] == -1 && h.v[2] == -1 && h.v[3] == -1;
 }
 bool simd_128ui::operator!=(const simd_128ui& rhs) const { return !(*this == rhs); }
 
@@ -189,17 +195,6 @@ simd_128ui& simd_128ui::sqrt_inline() {
     y = math::square_root(y);
     z = math::square_root(z);
     w = math::square_root(w);
-    return *this;
-}
-
-simd_128ui simd_128ui::shuffle(const simd_128ui::shuffle_opts& opts) const {
-    simd_128ui result = *this;
-    result.shuffle_inline(opts);
-    return result;
-}
-
-simd_128ui& simd_128ui::shuffle_inline(const simd_128ui::shuffle_opts& opts) {
-    this->data = _mm_shuffle_epi32(this->data, opts.to_int32());
     return *this;
 }
 
@@ -678,14 +673,18 @@ simd_128i& simd_128i::operator=(const int32 all) {
 }
 
 simd_128i simd_128i::operator+(const simd_128i& rhs) const {
-    return simd_128i(_mm_add_epi32(this->data, rhs.data).m128i_i32);
+    simd_128i copy = *this;
+    copy += rhs;
+    return copy;
 }
 simd_128i& simd_128i::operator+=(const simd_128i& rhs) {
     this->data = _mm_add_epi32(this->data, rhs.data);
     return *this;
 }
 simd_128i simd_128i::operator-(const simd_128i& rhs) const {
-    return simd_128i(_mm_sub_epi32(this->data, rhs.data).m128i_i32);
+    simd_128i result = *this;
+    result -= rhs;
+    return result;
 }
 simd_128i& simd_128i::operator-=(const simd_128i& rhs) {
     this->data = _mm_sub_epi32(this->data, rhs.data);
@@ -731,10 +730,14 @@ simd_128i& simd_128i::operator/=(const simd_128i& rhs) {
 }
 
 simd_128i simd_128i::operator&(const simd_128i& rhs) const {
-    return simd_128i(_mm_and_si128(this->data, rhs.data).m128i_i32);
+    simd_128i result = *this;
+    result.data = _mm_and_si128(this->data, rhs.data);
+    return result;
 }
 simd_128i simd_128i::operator|(const simd_128i& rhs) const {
-    return simd_128i(_mm_or_si128(this->data, rhs.data).m128i_i32);
+    simd_128i result = *this;
+    result.data = _mm_or_si128(this->data, rhs.data);
+    return result;
 }
 simd_128i& simd_128i::operator&=(const simd_128i& rhs) {
     this->data = _mm_and_si128(this->data, rhs.data);
@@ -745,7 +748,9 @@ simd_128i& simd_128i::operator|=(const simd_128i& rhs) {
     return *this;
 }
 simd_128i simd_128i::operator^(const simd_128i& rhs) const {
-    return simd_128i(_mm_xor_si128(this->data, rhs.data).m128i_i32);
+    simd_128i result = *this;
+    result.data = _mm_xor_si128(this->data, rhs.data);
+    return result;
 }
 simd_128i& simd_128i::operator^=(const simd_128i& rhs) {
     this->data = _mm_xor_si128(this->data, rhs.data);
@@ -765,7 +770,12 @@ simd_128i simd_128i::operator-() const {
 
 bool simd_128i::operator==(const simd_128i& rhs) const {
     __m128i cmp = _mm_cmpeq_epi32(data, rhs.data);
-    return cmp.m128i_i32[0] == -1 && cmp.m128i_i32[1] == -1 && cmp.m128i_i32[2] == -1 && cmp.m128i_i32[3] == -1;
+    union helper {
+        __m128i m128i;
+        int32 v[4];
+    } h;
+    h.m128i = cmp;
+    return h.v[0] == -1 && h.v[1] == -1 && h.v[2] == -1 && h.v[3] == -1;
 }
 
 bool simd_128i::operator!=(const simd_128i& rhs) const { return !(*this == rhs); }
@@ -848,17 +858,6 @@ simd_128i& simd_128i::sqrt_inline() {
     return *this;
 }
 
-simd_128i simd_128i::shuffle(const simd_128i::shuffle_opts& opts) const {
-    simd_128i result = *this;
-    result.shuffle_inline(opts);
-    return result;
-}
-
-simd_128i& simd_128i::shuffle_inline(const simd_128i::shuffle_opts& opts) {
-    this->data = _mm_shuffle_epi32(this->data, opts.to_int32());
-    return *this;
-}
-
 // simd_128f implementation
 simd_128f::simd_128f() : data(_mm_setzero_ps()) {}
 simd_128f::simd_128f(const float all) : data(_mm_set1_ps(all)) {}
@@ -894,28 +893,32 @@ simd_128f& simd_128f::operator=(const float all) {
 }
 
 simd_128f simd_128f::operator+(const simd_128f& rhs) const {
-    return simd_128f(_mm_add_ps(this->data, rhs.data).m128_f32);
+    __m128 result = _mm_add_ps(this->data, rhs.data);
+    return simd_128f(reinterpret_cast<simd_128f&>(result));
 }
 simd_128f& simd_128f::operator+=(const simd_128f& rhs) {
     this->data = _mm_add_ps(this->data, rhs.data);
     return *this;
 }
 simd_128f simd_128f::operator-(const simd_128f& rhs) const {
-    return simd_128f(_mm_sub_ps(this->data, rhs.data).m128_f32);
+    __m128 result = _mm_sub_ps(this->data, rhs.data);
+    return simd_128f(reinterpret_cast<simd_128f&>(result));
 }
 simd_128f& simd_128f::operator-=(const simd_128f& rhs) {
     this->data = _mm_sub_ps(this->data, rhs.data);
     return *this;
 }
 simd_128f simd_128f::operator*(const simd_128f& rhs) const {
-    return simd_128f(_mm_mul_ps(this->data, rhs.data).m128_f32);
+    __m128 result = _mm_mul_ps(this->data, rhs.data);
+    return simd_128f(reinterpret_cast<simd_128f&>(result));
 }
 simd_128f& simd_128f::operator*=(const simd_128f& rhs) {
     this->data = _mm_mul_ps(this->data, rhs.data);
     return *this;
 }
 simd_128f simd_128f::operator/(const simd_128f& rhs) const {
-    return simd_128f(_mm_div_ps(this->data, rhs.data).m128_f32);
+    __m128 result = _mm_div_ps(this->data, rhs.data);
+    return simd_128f(reinterpret_cast<simd_128f&>(result));
 }
 simd_128f& simd_128f::operator/=(const simd_128f& rhs) {
     this->data = _mm_div_ps(this->data, rhs.data);
@@ -923,10 +926,12 @@ simd_128f& simd_128f::operator/=(const simd_128f& rhs) {
 }
 
 simd_128f simd_128f::operator&(const simd_128f& rhs) const {
-    return simd_128f(_mm_and_ps(this->data, rhs.data).m128_f32);
+    __m128 result = _mm_and_ps(this->data, rhs.data);
+    return simd_128f(reinterpret_cast<simd_128f&>(result));
 }
 simd_128f simd_128f::operator|(const simd_128f& rhs) const {
-    return simd_128f(_mm_or_ps(this->data, rhs.data).m128_f32);
+    __m128 result = _mm_or_ps(this->data, rhs.data);
+    return simd_128f(reinterpret_cast<simd_128f&>(result));
 }
 simd_128f& simd_128f::operator&=(const simd_128f& rhs) {
     this->data = _mm_and_ps(this->data, rhs.data);
@@ -937,51 +942,54 @@ simd_128f& simd_128f::operator|=(const simd_128f& rhs) {
     return *this;
 }
 simd_128f simd_128f::operator^(const simd_128f& rhs) const {
-    return simd_128f(_mm_xor_ps(this->data, rhs.data).m128_f32);
+    __m128 result = _mm_xor_ps(this->data, rhs.data);
+    return simd_128f(reinterpret_cast<simd_128f&>(result));
 }
 simd_128f& simd_128f::operator^=(const simd_128f& rhs) {
     this->data = _mm_xor_ps(this->data, rhs.data);
     return *this;
 }
 
-simd_128f simd_128f::operator!() const { return simd_128f(_mm_xor_ps(this->data, _mm_set1_ps(-1.0f)).m128_f32); }
-simd_128f simd_128f::operator-() const { return simd_128f(_mm_sub_ps(_mm_setzero_ps(), this->data).m128_f32); }
+simd_128f simd_128f::operator!() const {
+    __m128 result = _mm_xor_ps(this->data, _mm_set1_ps(-1.0f));
+    return simd_128f(reinterpret_cast<simd_128f&>(result));
+}
+simd_128f simd_128f::operator-() const {
+    __m128 result = _mm_sub_ps(_mm_setzero_ps(), this->data);
+    return simd_128f(reinterpret_cast<simd_128f&>(result));
+}
 
 bool simd_128f::operator==(const simd_128f& rhs) const {
     __m128 cmp = _mm_cmpeq_ps(this->data, rhs.data);
-    return cmp.m128_f32[0] != 0.0f && cmp.m128_f32[1] != 0.0f && cmp.m128_f32[2] != 0.0f && cmp.m128_f32[3] != 0.0f;
+    union helper {
+        __m128 m;
+        float f[4];
+    };
+    helper h;
+    h.m = cmp;
+
+    return h.f[0] != 0.0f && h.f[1] != 0.0f && h.f[2] != 0.0f && h.f[3] != 0.0f;
 }
 bool simd_128f::operator!=(const simd_128f& rhs) const { return !(*this == rhs); }
 
 simd_128f simd_128f::max(const simd_128f& lhs, const simd_128f& rhs) {
-    return simd_128f(_mm_max_ps(lhs.data, rhs.data).m128_f32);
+    __m128 result = _mm_max_ps(lhs.data, rhs.data);
+    return simd_128f(reinterpret_cast<simd_128f&>(result));
 }
 simd_128f simd_128f::min(const simd_128f& lhs, const simd_128f& rhs) {
-    return simd_128f(_mm_min_ps(lhs.data, rhs.data).m128_f32);
+    __m128 result = _mm_min_ps(lhs.data, rhs.data);
+    return simd_128f(reinterpret_cast<simd_128f&>(result));
 }
 
-simd_128f simd_128f::sqrt() const { return simd_128f(_mm_sqrt_ps(this->data).m128_f32); }
+simd_128f simd_128f::sqrt() const {
+    __m128 result = _mm_sqrt_ps(this->data);
+    return simd_128f(reinterpret_cast<simd_128f&>(result));
+}
 simd_128f& simd_128f::sqrt_inline() {
     this->data = _mm_sqrt_ps(this->data);
     return *this;
 }
 
-simd_128f simd_128f::shuffle(const simd_128f& other, const simd_128f::shuffle_opts& opts) const {
-    simd_128f result = *this;
-    result.shuffle_inline(other, opts);
-    return result;
-}
-
-simd_128f& simd_128f::shuffle_inline(const simd_128f& other, const simd_128f::shuffle_opts& opts) {
-    this->data = _mm_shuffle_ps(this->data, other.data, opts.to_int32());
-    return *this;
-}
-
-simd_128f simd_128f::horizontal_add(const simd_128f& rhs) const {
-    simd_128f result = *this;
-    result.horizontal_add_inline(rhs);
-    return result;
-}
 simd_128f& simd_128f::horizontal_add_inline(const simd_128f& rhs) {
 #if EDVAR_CPP_CORE_USE_SSE4_2
     this->data = _mm_hadd_ps(this->data, rhs.data);
@@ -1011,6 +1019,21 @@ simd_128f& simd_128f::horizontal_sub_inline(const simd_128f& rhs) {
     return *this;
 }
 
+float simd_128f::dot(const simd_128f& rhs) const {
+    float dot_product;
+#if EDVAR_CPP_CORE_USE_SSE4_2
+    __m128 result_data = _mm_dp_ps(data, rhs.data, 0xF1);
+    dot_product = _mm_cvtss_f32(result_data);
+#else
+    // no sse4.1 dot product intrinsic, fallback to mul + horizontal add
+    simd_128f mul = (*this) * rhs;
+    mul.horizontal_add_inline(mul);
+    mul.horizontal_add_inline(mul);
+    dot_product = mul.x;
+#endif
+    return dot_product;
+}
+
 // simd_128d implementation
 simd_128d::simd_128d() : data(_mm_setzero_pd()) {}
 simd_128d::simd_128d(const double all) : data(_mm_set1_pd(all)) {}
@@ -1034,28 +1057,32 @@ simd_128d& simd_128d::operator=(const double all) {
 }
 
 simd_128d simd_128d::operator+(const simd_128d& rhs) const {
-    return simd_128d(_mm_add_pd(this->data, rhs.data).m128d_f64);
+    __m128d result = _mm_add_pd(this->data, rhs.data);
+    return simd_128d(reinterpret_cast<simd_128d&>(result));
 }
 simd_128d& simd_128d::operator+=(const simd_128d& rhs) {
     this->data = _mm_add_pd(this->data, rhs.data);
     return *this;
 }
 simd_128d simd_128d::operator-(const simd_128d& rhs) const {
-    return simd_128d(_mm_sub_pd(this->data, rhs.data).m128d_f64);
+    __m128d result = _mm_sub_pd(this->data, rhs.data);
+    return simd_128d(reinterpret_cast<simd_128d&>(result));
 }
 simd_128d& simd_128d::operator-=(const simd_128d& rhs) {
     this->data = _mm_sub_pd(this->data, rhs.data);
     return *this;
 }
 simd_128d simd_128d::operator*(const simd_128d& rhs) const {
-    return simd_128d(_mm_mul_pd(this->data, rhs.data).m128d_f64);
+    __m128d result = _mm_mul_pd(this->data, rhs.data);
+    return simd_128d(reinterpret_cast<simd_128d&>(result));
 }
 simd_128d& simd_128d::operator*=(const simd_128d& rhs) {
     this->data = _mm_mul_pd(this->data, rhs.data);
     return *this;
 }
 simd_128d simd_128d::operator/(const simd_128d& rhs) const {
-    return simd_128d(_mm_div_pd(this->data, rhs.data).m128d_f64);
+    __m128d result = _mm_div_pd(this->data, rhs.data);
+    return simd_128d(reinterpret_cast<simd_128d&>(result));
 }
 simd_128d& simd_128d::operator/=(const simd_128d& rhs) {
     this->data = _mm_div_pd(this->data, rhs.data);
@@ -1063,10 +1090,12 @@ simd_128d& simd_128d::operator/=(const simd_128d& rhs) {
 }
 
 simd_128d simd_128d::operator&(const simd_128d& rhs) const {
-    return simd_128d(_mm_and_pd(this->data, rhs.data).m128d_f64);
+    __m128d result = _mm_and_pd(this->data, rhs.data);
+    return simd_128d(reinterpret_cast<simd_128d&>(result));
 }
 simd_128d simd_128d::operator|(const simd_128d& rhs) const {
-    return simd_128d(_mm_or_pd(this->data, rhs.data).m128d_f64);
+    __m128d result = _mm_or_pd(this->data, rhs.data);
+    return simd_128d(reinterpret_cast<simd_128d&>(result));
 }
 simd_128d& simd_128d::operator&=(const simd_128d& rhs) {
     this->data = _mm_and_pd(this->data, rhs.data);
@@ -1077,43 +1106,50 @@ simd_128d& simd_128d::operator|=(const simd_128d& rhs) {
     return *this;
 }
 simd_128d simd_128d::operator^(const simd_128d& rhs) const {
-    return simd_128d(_mm_xor_pd(this->data, rhs.data).m128d_f64);
+    __m128d result = _mm_xor_pd(this->data, rhs.data);
+    return simd_128d(reinterpret_cast<simd_128d&>(result));
 }
 simd_128d& simd_128d::operator^=(const simd_128d& rhs) {
     this->data = _mm_xor_pd(this->data, rhs.data);
     return *this;
 }
 
-simd_128d simd_128d::operator!() const { return simd_128d(_mm_xor_pd(this->data, _mm_set1_pd(-1.0)).m128d_f64); }
-simd_128d simd_128d::operator-() const { return simd_128d(_mm_sub_pd(_mm_setzero_pd(), this->data).m128d_f64); }
+simd_128d simd_128d::operator!() const {
+    __m128d result = _mm_xor_pd(this->data, _mm_set1_pd(-1.0));
+    return simd_128d(reinterpret_cast<simd_128d&>(result));
+}
+simd_128d simd_128d::operator-() const {
+    __m128d result = _mm_sub_pd(_mm_setzero_pd(), this->data);
+    return simd_128d(reinterpret_cast<simd_128d&>(result));
+}
 
 bool simd_128d::operator==(const simd_128d& rhs) const {
     __m128d cmp = _mm_cmpeq_pd(this->data, rhs.data);
-    return cmp.m128d_f64[0] != 0.0 && cmp.m128d_f64[1] != 0.0;
+    union helper {
+        __m128d m;
+        double f[2];
+    };
+    helper h;
+    h.m = cmp;
+    return h.f[0] != 0.0 && h.f[1] != 0.0;
 }
 bool simd_128d::operator!=(const simd_128d& rhs) const { return !(*this == rhs); }
 
 simd_128d simd_128d::max(const simd_128d& lhs, const simd_128d& rhs) {
-    return simd_128d(_mm_max_pd(lhs.data, rhs.data).m128d_f64);
+    __m128d result = _mm_max_pd(lhs.data, rhs.data);
+    return simd_128d(reinterpret_cast<simd_128d&>(result));
 }
 simd_128d simd_128d::min(const simd_128d& lhs, const simd_128d& rhs) {
-    return simd_128d(_mm_min_pd(lhs.data, rhs.data).m128d_f64);
+    __m128d result = _mm_min_pd(lhs.data, rhs.data);
+    return simd_128d(reinterpret_cast<simd_128d&>(result));
 }
 
-simd_128d simd_128d::sqrt() const { return simd_128d(_mm_sqrt_pd(this->data).m128d_f64); }
+simd_128d simd_128d::sqrt() const {
+    __m128d result = _mm_sqrt_pd(this->data);
+    return simd_128d(reinterpret_cast<simd_128d&>(result));
+}
 simd_128d& simd_128d::sqrt_inline() {
     this->data = _mm_sqrt_pd(this->data);
-    return *this;
-}
-
-simd_128d simd_128d::shuffle(const simd_128d& other, const simd_128d::shuffle_opts& opts) const {
-    simd_128d result = *this;
-    result.shuffle_inline(other, opts);
-    return result;
-}
-
-simd_128d& simd_128d::shuffle_inline(const simd_128d& other, const simd_128d::shuffle_opts& opts) {
-    this->data = _mm_shuffle_pd(this->data, other.data, opts.to_int32());
     return *this;
 }
 
@@ -1218,6 +1254,7 @@ simd_256d& simd_256d::operator=(const simd_256d& rhs) {
     z = rhs.z;
     w = rhs.w;
 #endif
+    return *this;
 }
 simd_256d& simd_256d::operator=(simd_256d&& rhs) noexcept {
 #if EDVAR_CPP_CORE_USE_AVX2
@@ -1466,7 +1503,14 @@ bool simd_256d::operator==(const simd_256d& rhs) const {
 #else
     __m128d cmp1 = _mm_cmpeq_pd(this->halves[0], rhs.halves[0]);
     __m128d cmp2 = _mm_cmpeq_pd(this->halves[1], rhs.halves[1]);
-    return cmp1.m128d_f64[0] != 0.0 && cmp1.m128d_f64[1] != 0.0 && cmp2.m128d_f64[0] != 0.0 && cmp2.m128d_f64[1] != 0.0;
+    union helper {
+        __m128d m;
+        double f[2];
+    };
+    helper h1, h2;
+    h1.m = cmp1;
+    h2.m = cmp2;
+    return h1.f[0] != 0.0 && h1.f[1] != 0.0 && h2.f[0] != 0.0 && h2.f[1] != 0.0;
 #endif
 }
 bool simd_256d::operator!=(const simd_256d& rhs) const { return !(*this == rhs); }
@@ -1512,26 +1556,6 @@ simd_256d& simd_256d::horizontal_sub_inline(const simd_256d& rhs) {
     return *this;
 }
 
-simd_256d simd_256d::shuffle(const int& opts) const {
-    simd_256d result = *this;
-    result.shuffle_inline(opts);
-    return result;
-}
-simd_256d& simd_256d::shuffle_inline(const int& opts) {
-#if EDVAR_CPP_CORE_USE_AVX
-    this->data = _mm256_permute4x64_pd(this->data, opts);
-#else
-    alignas(32) double temp[4];
-    edvar::memory::copy_bytes(temp, &this->data, sizeof(temp));
-
-    x = temp[(opts >> 0) & 0x3];
-    y = temp[(opts >> 2) & 0x3];
-    z = temp[(opts >> 4) & 0x3];
-    w = temp[(opts >> 6) & 0x3];
-#endif
-    return *this;
-}
-
 simd_256d simd_256d::cross(const simd_256d& other) const {
     simd_256d result = *this;
     result.cross_inline(other);
@@ -1539,10 +1563,10 @@ simd_256d simd_256d::cross(const simd_256d& other) const {
 }
 simd_256d& simd_256d::cross_inline(const simd_256d& other) {
 #if EDVAR_CPP_CORE_USE_AVX2
-    __m256d a_yzx = _mm256_permute_pd(this->data, _MM_SHUFFLE(3, 0, 2, 1));
-    __m256d b_yzx = _mm256_permute_pd(other.data, _MM_SHUFFLE(3, 0, 2, 1));
-    __m256d c = _mm256_sub_pd(_mm256_mul_pd(this->data, b_yzx), _mm256_mul_pd(a_yzx, other.data));
-    this->data = _mm256_permute_pd(c, _MM_SHUFFLE(3, 0, 2, 1));
+    simd_256d a_yzx = this->shuffle<1, 0, 2, 3>();
+    simd_256d b_yzx = other.shuffle<1, 0, 2, 3>();
+    simd_256d c = ((*this) * b_yzx) - (a_yzx * other);
+    this->data = c.shuffle<1, 2, 0, 3>().data;
 #else
     double tx = y * other.z - z * other.y;
     double ty = z * other.x - x * other.z;
@@ -1554,4 +1578,23 @@ simd_256d& simd_256d::cross_inline(const simd_256d& other) {
     return *this;
 }
 
+double simd_128d::dot(const simd_128d& other) const {
+#if EDVAR_CPP_CORE_USE_SSE4_2
+    __m128d result_data = _mm_dp_pd(data, other.data, 0x31);
+    return _mm_cvtsd_f64(result_data);
+#else
+    simd_128d mul = (*this) * other;
+    mul.horizontal_add_inline(mul);
+    mul.horizontal_add_inline(mul);
+    return mul.x;
+#endif
+}
+
+float simd_256d::dot(const simd_256d& other) const {
+    // no avx _mm256_dp_pd intrinsic, fallback to mul + horizontal add
+    simd_256d mul = (*this) * other;
+    mul.horizontal_add_inline(mul);
+    mul.horizontal_add_inline(mul);
+    return mul.x;
+}
 } // namespace edvar::math::simd

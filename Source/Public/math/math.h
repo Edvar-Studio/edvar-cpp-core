@@ -77,4 +77,15 @@ double square_root(const uint64& value, const double& tolerance = 1e-6);
 double square_root(const double& value, const double& tolerance = 1e-6);
 double square_root(const float& value, const double& tolerance = 1e-6f);
 
+double cos(const double& radians);
+double sin(const double& radians);
+double tan(const double& radians);
+double acos(const double& value);
+double asin(const double& value);
+double atan(const double& value);
+
 } // namespace edvar::math
+
+#include "math/matrix.h"     // IWYU pragma: keep
+#include "math/quaternion.h" // IWYU pragma: keep
+#include "math/vector.h"     // IWYU pragma: keep

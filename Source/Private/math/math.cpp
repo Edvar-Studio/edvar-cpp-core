@@ -1,4 +1,5 @@
 #include "math/math.h"
+#include "diagnostics/assertion.h"
 #include "math/simd_support.h"
 
 namespace edvar::math {
@@ -168,6 +169,105 @@ double square_root(const uint64& value, const double& tolerance) {
     simd::simd_128d vec(0, static_cast<double>(value));
     vec.sqrt_inline();
     return vec.y;
+}
+
+double cos(const double& radians) {
+    // Normalize the angle to the range [0, 2π)
+    double angle = radians - (2.0 * PI) * floor(radians / (2.0 * PI));
+
+    // Use the Taylor series expansion for cos(x) around 0
+    double term = 1.0; // First term of the series
+    double result = term;
+    double x_squared = angle * angle;
+
+    for (int n = 1; n <= 10; ++n) {
+        term *= -x_squared / ((2 * n - 1) * (2 * n)); // Calculate the next term
+        result += term;
+    }
+
+    return result;
+}
+
+double sin(const double& radians) {
+    // Normalize the angle to the range [0, 2π)
+    double angle = radians - (2.0 * PI) * floor(radians / (2.0 * PI));
+
+    // Use the Taylor series expansion for sin(x) around 0
+    double term = angle; // First term of the series
+    double result = term;
+    double x_squared = angle * angle;
+
+    for (int n = 1; n <= 10; ++n) {
+        term *= -x_squared / ((2 * n) * (2 * n + 1)); // Calculate the next term
+        result += term;
+    }
+
+    return result;
+}
+
+double tan(const double& radians) {
+    double cosine = cos(radians);
+    if (cosine == 0.0) {
+        edvar::diagnostics::check(false, L"tan() undefined for angles where cos() is zero.");
+        return 0.0; // Undefined, return 0.0 to avoid division by zero
+    }
+    return sin(radians) / cosine;
+}
+
+double acos(const double& value) {
+    if (value < -1.0 || value > 1.0) {
+        edvar::diagnostics::check(false, L"acos() input out of domain [-1, 1].");
+        return 0.0; // Out of domain, return 0.0
+    }
+    // Use the Taylor series expansion for acos(x) around 0
+    double term = value;             // First term of the series
+    double result = (PI / 2) - term; // acos(0) = π/2
+    double x_squared = value * value;
+
+    for (int n = 1; n <= 10; ++n) {
+        term *= x_squared * (2 * n - 1) / (2 * n); // Calculate the next term
+        result -= term / (2 * n + 1);
+    }
+
+    return result;
+}
+
+double asin(const double& value) {
+    if (value < -1.0 || value > 1.0) {
+        edvar::diagnostics::check(false, L"asin() input out of domain [-1, 1].");
+        return 0.0; // Out of domain, return 0.0
+    }
+    // Use the Taylor series expansion for asin(x) around 0
+    double term = value; // First term of the series
+    double result = term;
+    double x_squared = value * value;
+
+    for (int n = 1; n <= 10; ++n) {
+        term *= x_squared * (2 * n - 1) / (2 * n); // Calculate the next term
+        result += term / (2 * n + 1);
+    }
+
+    return result;
+}
+
+double atan(const double& value) {
+    // Use the Taylor series expansion for atan(x) around 0
+    if (value > 1.0) {
+        return (PI / 2) - atan(1.0 / value);
+    } else if (value < -1.0) {
+        return -(PI / 2) - atan(1.0 / value);
+    }
+
+    double term = value; // First term of the series
+    double result = term;
+    double x_squared = value * value;
+
+    for (int n = 1; n <= 10; ++n) {
+        term *= -x_squared; // Calculate the next term
+        result += term / (2 * n + 1);
+    }
+
+    return result;
 }
 
 } // namespace edvar::math

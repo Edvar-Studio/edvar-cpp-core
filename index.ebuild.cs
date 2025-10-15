@@ -16,7 +16,9 @@ class EdvarCppCore : ModuleBase
     Description = "Sets the CPU extension to use AVX2 for this module. If true the math will use AVX2 instructions. If false will use SSE4.2 instructions.\n" +
     "Both are available widely according to the \"Steam Hardware & Software Survey: September 2025\". SSE4.2 : 99.78%, AVX2: 95.03%",
     Name = "UseAVX2")]
-    bool UseAVX2 = false;
+    bool UseAVX2 = true;
+
+    //TODO: Add Neon support for ARM CPUs. This is very much later down the line.
 
     public EdvarCppCore(ModuleContext context) : base(context)
     {
@@ -28,16 +30,16 @@ class EdvarCppCore : ModuleBase
         this.Includes.Public.Add("Source/Public");
         this.Includes.Private.Add("Source/Private");
         this.ForceIncludes.Public.Add("Source/Private/force_include.h");
-        if (UseSSE4_2)
-        {
-            this.Definitions.Public.Add("EDVAR_CPP_CORE_USE_SSE4_2=1");
-            this.CPUExtension = CPUExtensions.SSE4_2;
-        }
-        else if (UseAVX2)
+        if (UseAVX2)
         {
             this.Definitions.Public.Add("EDVAR_CPP_CORE_USE_SSE4_2=1");
             this.Definitions.Public.Add("EDVAR_CPP_CORE_USE_AVX2=1");
             this.CPUExtension = CPUExtensions.AVX2;
+        }
+        else if (UseSSE4_2)
+        {
+            this.Definitions.Public.Add("EDVAR_CPP_CORE_USE_SSE4_2=1");
+            this.CPUExtension = CPUExtensions.SSE4_2;
         }
         else
         {
@@ -45,6 +47,10 @@ class EdvarCppCore : ModuleBase
             this.CPUExtension = CPUExtensions.SSE2;
         }
 
+        if(context.Toolchain.Name == "msvc")
+        {
+            this.CompilerOptions.Add("/diagnostics:caret");
+        }
 
 
         // Add ICU combined as a static library to this module

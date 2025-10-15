@@ -3,8 +3,8 @@
 namespace edvar::container::iterator {
 template <typename storage_type, bool is_const> class array_view_iterator {
 public:
-    using data_type = edvar::meta::conditional_type<is_const, const storage_type*, storage_type*>;
-    using data_ref_type = edvar::meta::conditional_type<is_const, const storage_type&, storage_type&>;
+    using data_type = std::conditional_t<is_const, const storage_type*, storage_type*>;
+    using data_ref_type = std::conditional_t<is_const, const storage_type&, storage_type&>;
 
     array_view_iterator(storage_type* start, uint32 length);
     array_view_iterator(const array_view<storage_type>& view);

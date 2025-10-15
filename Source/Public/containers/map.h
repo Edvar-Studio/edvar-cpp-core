@@ -6,7 +6,6 @@ namespace container {
 namespace iterator {
 template <typename MapType, bool IsConst> class map_iterator;
 }
-} // namespace container
 
 // Configuration constants (avoid magic numbers)
 static constexpr uint32 DEFAULT_INITIAL_BUCKET_COUNT = 16u;
@@ -300,9 +299,9 @@ private:
     }
 
     template <typename in_type> static inline uint64 get_hash_of_element(const in_type& element) {
-        
+
         return edvar::hash(element);
     }
 };
-
+} // namespace container
 } // namespace edvar

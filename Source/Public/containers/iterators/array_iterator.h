@@ -63,16 +63,16 @@ public:
     }
     bool operator!=(const array_iterator& other) const { return !(*this == other); }
 
-    edvar::meta::enable_if<!is_const, array_iterator&> replace(const storage_type& value) {
+    std::enable_if_t<!is_const, array_iterator&> replace(const storage_type& value) {
         (*_data)[_current_index] = value;
         return *this;
     }
-    edvar::meta::enable_if<!is_const, array_iterator&> replace(storage_type&& value) {
+    std::enable_if_t<!is_const, array_iterator&> replace(storage_type&& value) {
         (*_data)[_current_index] = edvar::move(value);
         return *this;
     }
 
-    edvar::meta::enable_if<!is_const, array_iterator&> remove() {
+    std::enable_if_t<!is_const, array_iterator&> remove() {
         if (_data && _current_index < static_cast<uint32>(_data->length())) {
             _data->remove_at(static_cast<int32>(_current_index));
         }
