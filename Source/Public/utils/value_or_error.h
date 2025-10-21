@@ -75,6 +75,5 @@ private:
     value_type _value;
     error_type _error;
 };
-template <typename value_type> using value_or_error_code = value_or_error<value_type, int32>;
-template <typename value_type> using value_or_error_message = value_or_error<value_type, wchar_t[1024]>;
+
 } // namespace edvar

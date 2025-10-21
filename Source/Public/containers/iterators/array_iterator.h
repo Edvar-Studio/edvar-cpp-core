@@ -63,16 +63,16 @@ public:
     }
     bool operator!=(const array_iterator& other) const { return !(*this == other); }
 
-    std::enable_if_t<!is_const, array_iterator&> replace(const storage_type& value) {
+    array_iterator& replace(const storage_type& value) requires (!is_const){
         (*_data)[_current_index] = value;
         return *this;
     }
-    std::enable_if_t<!is_const, array_iterator&> replace(storage_type&& value) {
+    array_iterator& replace(storage_type&& value) requires (!is_const) {
         (*_data)[_current_index] = edvar::move(value);
         return *this;
     }
 
-    std::enable_if_t<!is_const, array_iterator&> remove() {
+    array_iterator& remove() requires (!is_const) {
         if (_data && _current_index < static_cast<uint32>(_data->length())) {
             _data->remove_at(static_cast<int32>(_current_index));
         }

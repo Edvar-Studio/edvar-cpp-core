@@ -243,7 +243,7 @@ private:
     uint32 _length;
 };
 
-template <typename character_type = char_utf16> class string_base {
+template <typename character_type> class string_base {
 public:
     string_base() {
         _data.add(0); // null terminator
@@ -500,7 +500,7 @@ public:
     template <typename... Args> static string_base format(const char* format, const Args&... args) {
         return format(reinterpret_cast<const character_type*>(format), args...);
     }
-    template<typename... Args> static string_base format(const wchar_t* format, const Args&... args) {
+    template <typename... Args> static string_base format(const wchar_t* format, const Args&... args) {
         return format(reinterpret_cast<const character_type*>(format), args...);
     }
     template <typename... Args> static string_base format(const character_type* format, const Args&... args) {
@@ -509,11 +509,11 @@ public:
 
         // arguments to string
         array<string_base> arg_strings;
+        array<string_base> options_strings; // each argument can have its own options
         constexpr int num_args = sizeof...(Args);
         arg_strings.add_uninitialized(num_args);
 
         int arg_index = 0;
-        ((string_base::to_string_helper(args, arg_strings[arg_index++])) , ...);
         // parse format string
         for (auto iterator = format_view.begin(); iterator.has_next(); ++iterator) {
             character_type ch = *iterator;
@@ -539,6 +539,7 @@ public:
             }
             }
         }
+        ((string_base::to_string_helper(args, arg_strings[arg_index++])), ...);
         return result;
     }
 
@@ -613,6 +614,10 @@ public:
 
 private:
     array<character_type> _data;
+    template <typename value_type>
+    static void to_string_helper(const value_type& value, const string_base& options, string_base& out_string) {
+        out_string = edvar::to_string(value, options);
+    }
 };
 
 template <typename character_type>
@@ -620,7 +625,6 @@ string_view<character_type>::string_view(const string_base<character_type>& in_s
     _data = in_string_base.data();
     _length = in_string_base.length();
 }
-
 } // namespace edvar
 
 #pragma region iterator_requirements

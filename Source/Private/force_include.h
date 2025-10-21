@@ -20,11 +20,12 @@
 #        endif
 #    endif
 #endif
-#include <type_traits>            // IWYU pragma: export
-#include <new>                    // IWYU pragma: export
-#include <initializer_list>       // IWYU pragma: export
+#include <type_traits>      // IWYU pragma: export
+#include <concepts>         // IWYU pragma: export
+#include <new>              // IWYU pragma: export
+#include <initializer_list> // IWYU pragma: export
+
 #include "platform/basic_types.h" // IWYU pragma: export
-#include "meta/meta.h"            // IWYU pragma: export
 namespace edvar {
 namespace math {
 template <typename type> struct vector2;
@@ -32,9 +33,17 @@ template <typename type> struct vector3;
 template <typename type> struct quaternion;
 template <typename simd_type, uint32 rows, uint32 cols> struct matrix;
 } // namespace math
+template <typename character_type = char_utf16> class string_base;
 template <typename... args> class function_reference_array;
 template <typename return_value_type, typename... args> class function_reference;
+template <typename value_type, typename error_type> class value_or_error;
+template <typename in_type> struct optional;
+template <typename in_type> struct error_result;
+template <typename value_type> using value_or_error_code = value_or_error<value_type, int32>;
+template <typename value_type> using value_or_error_message = value_or_error<value_type, string_base<char_utf32>>;
 } // namespace edvar
+#include "meta/meta.h" // IWYU pragma: export
+
 #include "memory/operations.h" // IWYU pragma: export
 #include "memory/allocators.h" // IWYU pragma: export
 #include "utils/objects.h"     // IWYU pragma: export
@@ -53,7 +62,8 @@ template <typename storage_type, typename allocator_type = edvar::memory::heap_a
 using array = container::array<storage_type, allocator_type>;
 } // namespace edvar
 
-#include "utils/value_or_error.h"  // IWYU pragma: export
+#include "utils/value_or_error.h" // IWYU pragma: export
+
 #include "utils/hash.h"            // IWYU pragma: export
 #include "containers/tuple.h"      // IWYU pragma: export
 #include "containers/array.h"      // IWYU pragma: export
@@ -64,6 +74,7 @@ using string_utf32 = edvar::string_base<char_utf32>;
 using string_utf16 = edvar::string_base<char_utf16>;
 using string_utf8 = edvar::string_base<char_utf8>;
 using string = edvar::string_base<char_utf16>;
+
 } // namespace edvar
 
 #include "utils/to_string.h" // IWYU pragma: export
