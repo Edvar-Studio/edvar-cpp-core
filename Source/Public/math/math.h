@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 namespace edvar::math {
 
 static constexpr double PI = 3.14159265358979323846;
@@ -24,14 +25,14 @@ inline auto square(const auto& value) -> decltype(value * value) { return value 
 inline auto cube(const auto& value) -> decltype(value * value * value) { return value * value * value; }
 inline auto floor(const auto& value) -> decltype(value) {
     using return_type = decltype(value);
-    if constexpr (meta::is_unsigned<meta::remove_cv<meta::remove_reference<return_type>>>) {
+    if constexpr (std::is_unsigned_v<std::remove_cvref_t<return_type>>) {
         return static_cast<return_type>(static_cast<uint64>(value));
     }
     return static_cast<decltype(value)>(static_cast<int64>(value));
 }
 inline auto ceil(const auto& value) -> decltype(value) {
     using return_type = decltype(value);
-    if constexpr (meta::is_unsigned<meta::remove_cv<meta::remove_reference<return_type>>>) {
+    if constexpr (std::is_unsigned_v<std::remove_cvref_t<return_type>>) {
         return static_cast<return_type>(
             static_cast<uint64>(value + (value == static_cast<return_type>(static_cast<uint64>(value)) ? 0 : 1)));
     }

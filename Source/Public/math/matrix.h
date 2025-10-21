@@ -69,7 +69,7 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
     template <typename other_type, uint32 other_rows, uint32 other_cols>
     matrix<simd_type, rows, other_cols>& operator*=(const matrix<other_type, other_rows, other_cols>& other) {
         static_assert(cols == other_rows, "Incompatible matrix dimensions for multiplication");
-        if constexpr (edvar::meta::is_same_type<simd_type, other_type>()) {
+        if constexpr (std::is_same_v<simd_type, other_type>) {
             matrix<other_type, other_rows, other_cols> transposed_other = other.transposed();
             simd_type::matrix_multiply<rows, cols, other_rows, other_cols>(simd_data, transposed_other.simd_data,
                                                                            simd_data);
@@ -87,7 +87,7 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
         return matrix<simd_type, rows, other_cols>(*this) *= other;
     }
     template <typename other_type> matrix& operator+=(const matrix<other_type, rows, cols>& other) {
-        if constexpr (edvar::meta::is_same_type<simd_type, other_type>()) {
+        if constexpr (std::is_same_v<simd_type, other_type>) {
             for (uint32 r = 0; r < simd_rows; ++r) {
                 for (uint32 c = 0; c < simd_cols; ++c) {
                     simd_data[r][c] += other.simd_data[r][c];
@@ -103,12 +103,12 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
         }
         return *this;
     }
-    template <typename other_type> matrix operator+(const matrix<other_type, rows, cols>& other) const{
+    template <typename other_type> matrix operator+(const matrix<other_type, rows, cols>& other) const {
         return matrix(*this) += other;
     }
 
-    template<typename other_type> matrix operator-=(const matrix<other_type, rows, cols>& other) {
-        if constexpr (edvar::meta::is_same_type<simd_type, other_type>()) {
+    template <typename other_type> matrix operator-=(const matrix<other_type, rows, cols>& other) {
+        if constexpr (std::is_same_v<simd_type, other_type>) {
             for (uint32 r = 0; r < simd_rows; ++r) {
                 for (uint32 c = 0; c < simd_cols; ++c) {
                     simd_data[r][c] -= other.simd_data[r][c];
@@ -124,7 +124,7 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
         }
         return *this;
     }
-    template<typename other_type> matrix operator-(const matrix<other_type, rows, cols>& other) const{
+    template <typename other_type> matrix operator-(const matrix<other_type, rows, cols>& other) const {
         return matrix(*this) -= other;
     }
 
@@ -185,10 +185,7 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
         return *this;
     }
 
-
-    matrix& invert_inline(){
-
-    }
+    matrix& invert_inline() {}
 };
 
 using matrix4f = matrix<simd::simd_128f, 4, 4>;

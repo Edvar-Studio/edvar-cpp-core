@@ -10,13 +10,11 @@ namespace edvar::container {
 // Also they should preferably be move-assignable for best performance. Throw is already disabled for this library.
 template <typename in_type>
 inline constexpr bool can_store_in_array =
-    std::is_destructible_v<in_type> &&
-    (std::is_move_constructible_v<in_type> || std::is_copy_constructible_v<in_type>);
+    std::is_destructible_v<in_type> && (std::is_move_constructible_v<in_type> || std::is_copy_constructible_v<in_type>);
 
 template <typename storage_type, typename allocator_type> class array {
 public:
-    static_assert(std::is_destructible_v<storage_type>,
-                  "Type stored in edvar::container::array must be destructible");
+    static_assert(std::is_destructible_v<storage_type>, "Type stored in edvar::container::array must be destructible");
     static_assert(std::is_move_constructible_v<storage_type> || std::is_copy_constructible_v<storage_type>,
                   "Type stored in edvar::container::array must be either move-constructible or copy-constructible");
 
@@ -398,8 +396,7 @@ inline void array<storage_type, allocator_type>::insert(int32 index, const stora
     new (&_data[_size]) storage_type(edvar::move(_data[_size - 1]));
     // shift elements up; prefer noexcept move-assignment when available
     for (uint32 i = static_cast<uint32>(_size) - 1; i > static_cast<uint32>(index); --i) {
-        if constexpr (std::is_nothrow_move_assignable_v<storage_type> ||
-                      std::is_move_assignable_v<storage_type>) {
+        if constexpr (std::is_nothrow_move_assignable_v<storage_type> || std::is_move_assignable_v<storage_type>) {
             // if there is noexcept move-assignment, use it
             _data[i] = edvar::move(_data[i - 1]);
         } else {
@@ -462,7 +459,8 @@ inline int32 array<storage_type, allocator_type>::add(const storage_type& value)
 }
 
 template <typename storage_type, typename allocator_type>
-inline void array<storage_type, allocator_type>::append(std::remove_reference_t<storage_type>* in_array, uint32 element_count) {
+inline void array<storage_type, allocator_type>::append(std::remove_reference_t<storage_type>* in_array,
+                                                        uint32 element_count) {
     ensure_capacity(_size + element_count);
     for (uint32 i = 0; i < element_count; ++i) {
         new (&_data[_size]) storage_type(in_array[i]);
@@ -620,7 +618,7 @@ inline array<storage_type, allocator_type>::array(const array& other) : _data(nu
 }
 
 template <typename storage_type, typename allocator_type>
-inline array<storage_type, allocator_type>::array(storage_type* elems, uint32 size) {
+inline array<storage_type, allocator_type>::array(std::remove_reference_t<storage_type>* elems, uint32 size) {
     append(elems, size);
 }
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "meta/meta.h"
 #include "platform/basic_types.h"
 namespace edvar {
 static constexpr uint64 FNV_OFFSET_BASIS = 1469598103934665603ULL;
@@ -36,8 +35,15 @@ inline uint64 hash(const char_utf8& v) { return static_cast<uint64>(v); }
 inline uint64 hash(const char_utf16& v) { return static_cast<uint64>(v); }
 inline uint64 hash(const char_utf32& v) { return static_cast<uint64>(v); }
 
-template <typename type>
-inline edvar::meta::enable_if<edvar::meta::has_hash_function<type>, uint64> hash(const type& v) {
+template <typename in_type>
+concept has_hash_method = requires(const in_type& v) {
+    { v.get_hash() } -> std::same_as<uint64>;
+};
+
+template <typename in_type>
+inline uint64 hash(const in_type& v)
+    requires has_hash_method<in_type>
+{
     return v.get_hash();
 }
 

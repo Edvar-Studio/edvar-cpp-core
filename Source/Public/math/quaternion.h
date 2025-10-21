@@ -2,7 +2,7 @@
 
 namespace edvar::math {
 template <typename type> struct quaternion {
-    using simd_type = meta::conditional_type<meta::is_same_type<type, double>, simd::simd_256d, simd::simd_128f>;
+    using simd_type = std::conditional_t<std::is_same_v<type, double>, simd::simd_256d, simd::simd_128f>;
     quaternion() : x(0), y(0), z(0), w(1) {}
     quaternion(type all) : x(all), y(all), z(all), w(all) {}
     quaternion(type x, type y, type z, type w) : x(x), y(y), z(z), w(w) {}

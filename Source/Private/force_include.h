@@ -68,7 +68,6 @@ using array = container::array<storage_type, allocator_type>;
 #include "containers/tuple.h"      // IWYU pragma: export
 #include "containers/array.h"      // IWYU pragma: export
 #include "memory/smart_pointers.h" // IWYU pragma: export
-#include "containers/string.h"     // IWYU pragma: export
 namespace edvar {
 using string_utf32 = edvar::string_base<char_utf32>;
 using string_utf16 = edvar::string_base<char_utf16>;
@@ -76,6 +75,7 @@ using string_utf8 = edvar::string_base<char_utf8>;
 using string = edvar::string_base<char_utf16>;
 
 } // namespace edvar
+#include "utils/to_string.h"   // IWYU pragma: export
+#include "containers/string.h" // IWYU pragma: export
 
-#include "utils/to_string.h" // IWYU pragma: export
-#include "containers/map.h"  // IWYU pragma: export
+#include "containers/map.h" // IWYU pragma: export
