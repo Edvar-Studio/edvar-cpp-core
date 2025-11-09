@@ -75,8 +75,8 @@ struct alignas(16) simd_128d : simd_base<simd_128d> {
     bool operator==(const simd_128d& rhs) const;
     bool operator!=(const simd_128d& rhs) const;
 
-    inline double& operator[](uint32 index) { return this->v[index]; }
-    inline const double& operator[](uint32 index) const { return this->v[index]; }
+    inline double& operator[](uint32_t index) { return this->v[index]; }
+    inline const double& operator[](uint32_t index) const { return this->v[index]; }
 
     static simd_128d max(const simd_128d& lhs, const simd_128d& rhs);
     static simd_128d min(const simd_128d& lhs, const simd_128d& rhs);
@@ -89,7 +89,7 @@ struct alignas(16) simd_128d : simd_base<simd_128d> {
         use_mode x;
         use_mode y;
 
-        int32 to_int32() const { return (static_cast<int32>(y) << 2) | static_cast<int32>(x); }
+       int32_t toint32_t() const { return (static_cast<int32_t>(y) << 2) | static_cast<int32_t>(x); }
     };
 
     template <int x, int y, int z, int w> simd_128d shuffle_inline(const simd_128d* other = nullptr) {
@@ -117,10 +117,10 @@ struct alignas(16) simd_128d : simd_base<simd_128d> {
 
     double dot(const simd_128d& other) const;
 
-    template <uint32 lhs_rows, uint32 lhs_cols, uint32 rhs_original_rows, uint32 rhs_original_cols>
+    template <uint32_t lhs_rows, uint32_t lhs_cols, uint32_t rhs_original_rows, uint32_t rhs_original_cols>
     static void matrix_multiply(const simd_128d** lhs_arr, const simd_128d** transposed_rhs_arr, simd_128d** out) {
         static_assert(lhs_cols == rhs_original_rows, "Matrix multiplication dimension mismatch");
-        static constexpr uint32 simd_col_count = (lhs_cols + 1) / 2; // Each simd_128d holds 2 doubles
+        static constexpr uint32_t simd_col_count = (lhs_cols + 1) / 2; // Each simd_128d holds 2 doubles
 
         // additional optimization when lhs_cols is 1
         if constexpr (simd_col_count == 1) {
@@ -196,8 +196,8 @@ struct alignas(16) simd_128f : simd_base<simd_128f> {
     bool operator==(const simd_128f& rhs) const;
     bool operator!=(const simd_128f& rhs) const;
 
-    inline float& operator[](uint32 index) { return this->v[index]; }
-    inline const float& operator[](uint32 index) const { return this->v[index]; }
+    inline float& operator[](uint32_t index) { return this->v[index]; }
+    inline const float& operator[](uint32_t index) const { return this->v[index]; }
 
     static simd_128f max(const simd_128f& lhs, const simd_128f& rhs);
     static simd_128f min(const simd_128f& lhs, const simd_128f& rhs);
@@ -212,9 +212,9 @@ struct alignas(16) simd_128f : simd_base<simd_128f> {
         use_mode z;
         use_mode w;
 
-        int32 to_int32() const {
-            return (static_cast<int32>(w) << 6) | (static_cast<int32>(z) << 4) | (static_cast<int32>(y) << 2) |
-                   static_cast<int32>(x);
+       int32_t toint32_t() const {
+            return (static_cast<int32_t>(w) << 6) | (static_cast<int32_t>(z) << 4) | (static_cast<int32_t>(y) << 2) |
+                   static_cast<int32_t>(x);
         }
     };
     template <int x, int y, int z, int w> simd_128f& shuffle_inline(const simd_128f* other = nullptr) {
@@ -244,10 +244,10 @@ struct alignas(16) simd_128f : simd_base<simd_128f> {
 
     float dot(const simd_128f& other) const;
 
-    template <uint32 lhs_rows, uint32 lhs_cols, uint32 rhs_original_rows, uint32 rhs_original_cols>
+    template <uint32_t lhs_rows, uint32_t lhs_cols, uint32_t rhs_original_rows, uint32_t rhs_original_cols>
     static void matrix_multiply(const simd_128f** lhs_arr, const simd_128f** transposed_rhs_arr, simd_128f** out) {
         static_assert(lhs_cols == rhs_original_rows, "Matrix multiplication dimension mismatch");
-        static constexpr uint32 simd_col_count = (lhs_cols + 3) / 4; // Each simd_128f holds 4 floats
+        static constexpr uint32_t simd_col_count = (lhs_cols + 3) / 4; // Each simd_128f holds 4 floats
 
         // additional optimization when lhs_cols is 1
         if constexpr (simd_col_count == 1) {
@@ -276,22 +276,22 @@ struct alignas(16) simd_128f : simd_base<simd_128f> {
 };
 
 /**
- * 128-bit SIMD wrapper for 4 int32.
+ * 128-bit SIMD wrapper for 4int32_t.
  */
 struct alignas(16) simd_128i : simd_base<simd_128i> {
     union alignas(16) {
         __m128i data;
-        int32 v[4];
+       int32_t v[4];
         struct {
-            int32 x, y, z, w;
+           int32_t x, y, z, w;
         };
     };
 
     simd_128i();
-    simd_128i(const int32 all);
-    simd_128i(const int32 x, const int32 y, const int32 z, const int32 w);
-    simd_128i(const int32* to_place_data);
-    simd_128i(const std::initializer_list<int32>& list);
+    simd_128i(const int32_t all);
+    simd_128i(const int32_t x, const int32_t y, const int32_t z, const int32_t w);
+    simd_128i(const int32_t* to_place_data);
+    simd_128i(const std::initializer_list<int32_t>& list);
     ~simd_128i();
 
     simd_128i(const simd_128i& other);
@@ -299,9 +299,9 @@ struct alignas(16) simd_128i : simd_base<simd_128i> {
 
     simd_128i& operator=(const simd_128i& rhs);
     simd_128i& operator=(simd_128i&& rhs) noexcept;
-    simd_128i& operator=(const int32* to_place_data);
-    simd_128i& operator=(const std::initializer_list<int32>& list);
-    simd_128i& operator=(const int32 all);
+    simd_128i& operator=(const int32_t* to_place_data);
+    simd_128i& operator=(const std::initializer_list<int32_t>& list);
+    simd_128i& operator=(const int32_t all);
 
     simd_128i operator+(const simd_128i& rhs) const;
     simd_128i& operator+=(const simd_128i& rhs);
@@ -324,20 +324,20 @@ struct alignas(16) simd_128i : simd_base<simd_128i> {
     bool operator==(const simd_128i& rhs) const;
     bool operator!=(const simd_128i& rhs) const;
 
-    simd_128i operator<<(const int32 shift) const;
-    simd_128i& operator<<=(const int32 shift);
+    simd_128i operator<<(const int32_t shift) const;
+    simd_128i& operator<<=(const int32_t shift);
 
     simd_128i operator<<(const simd_128i& shift) const;
     simd_128i& operator<<=(const simd_128i& shift);
 
-    simd_128i operator>>(const int32 shift) const;
-    simd_128i& operator>>=(const int32 shift);
+    simd_128i operator>>(const int32_t shift) const;
+    simd_128i& operator>>=(const int32_t shift);
 
     simd_128i operator>>(const simd_128i& shift) const;
     simd_128i& operator>>=(const simd_128i& shift);
 
-    inline int32& operator[](uint32 index) { return this->v[index]; }
-    inline const int32& operator[](uint32 index) const { return this->v[index]; }
+    inline int32_t& operator[](uint32_t index) { return this->v[index]; }
+    inline const int32_t& operator[](uint32_t index) const { return this->v[index]; }
 
     static simd_128i max(const simd_128i& lhs, const simd_128i& rhs);
     static simd_128i min(const simd_128i& lhs, const simd_128i& rhs);
@@ -351,9 +351,9 @@ struct alignas(16) simd_128i : simd_base<simd_128i> {
         use_mode z;
         use_mode w;
 
-        int32 to_int32() const {
-            return (static_cast<int32>(w) << 6) | (static_cast<int32>(z) << 4) | (static_cast<int32>(y) << 2) |
-                   static_cast<int32>(x);
+       int32_t toint32_t() const {
+            return (static_cast<int32_t>(w) << 6) | (static_cast<int32_t>(z) << 4) | (static_cast<int32_t>(y) << 2) |
+                   static_cast<int32_t>(x);
         }
     };
 
@@ -362,21 +362,21 @@ struct alignas(16) simd_128i : simd_base<simd_128i> {
 };
 
 /**
- * 128-bit SIMD wrapper for 2 int64.
+ * 128-bit SIMD wrapper for 2int64_t.
  */
 struct alignas(16) simd_128l {
     union alignas(16) {
         __m128i data;
-        int64 v[2];
+       int64_t v[2];
         struct {
-            int64 x, y;
+           int64_t x, y;
         };
     };
     simd_128l();
-    simd_128l(const int64 all);
-    simd_128l(const int64 x, const int64 y);
-    simd_128l(const int64* to_place_data);
-    simd_128l(const std::initializer_list<int64>& list);
+    simd_128l(const int64_t all);
+    simd_128l(const int64_t x, const int64_t y);
+    simd_128l(const int64_t* to_place_data);
+    simd_128l(const std::initializer_list<int64_t>& list);
     ~simd_128l();
 
     simd_128l(const simd_128l& other);
@@ -384,9 +384,9 @@ struct alignas(16) simd_128l {
 
     simd_128l& operator=(const simd_128l& rhs);
     simd_128l& operator=(simd_128l&& rhs) noexcept;
-    simd_128l& operator=(const int64* to_place_data);
-    simd_128l& operator=(const std::initializer_list<int64>& list);
-    simd_128l& operator=(const int64 all);
+    simd_128l& operator=(const int64_t* to_place_data);
+    simd_128l& operator=(const std::initializer_list<int64_t>& list);
+    simd_128l& operator=(const int64_t all);
 
     simd_128l operator+(const simd_128l& rhs) const;
     simd_128l& operator+=(const simd_128l& rhs);
@@ -409,8 +409,8 @@ struct alignas(16) simd_128l {
     bool operator==(const simd_128l& rhs) const;
     bool operator!=(const simd_128l& rhs) const;
 
-    inline int64& operator[](uint32 index) { return this->v[index]; }
-    inline const int64& operator[](uint32 index) const { return this->v[index]; }
+    inline int64_t& operator[](uint32_t index) { return this->v[index]; }
+    inline const int64_t& operator[](uint32_t index) const { return this->v[index]; }
 
     static simd_128l max(const simd_128l& lhs, const simd_128l& rhs);
     static simd_128l min(const simd_128l& lhs, const simd_128l& rhs);
@@ -423,7 +423,7 @@ struct alignas(16) simd_128l {
         use_mode x;
         use_mode y;
 
-        int32 to_int32() const { return (static_cast<int32>(y) << 2) | static_cast<int32>(x); }
+       int32_t toint32_t() const { return (static_cast<int32_t>(y) << 2) | static_cast<int32_t>(x); }
     };
 
     simd_128l shuffle(const simd_128l& other, const shuffle_opts& opts) const;
@@ -431,21 +431,21 @@ struct alignas(16) simd_128l {
 };
 
 /**
- * 128-bit SIMD wrapper for 4 uint32.
+ * 128-bit SIMD wrapper for 4 uint32_t.
  */
 struct alignas(16) simd_128ui : simd_base<simd_128ui> {
     union alignas(16) {
         __m128i data;
-        uint32 v[4];
+        uint32_t v[4];
         struct {
-            uint32 x, y, z, w;
+            uint32_t x, y, z, w;
         };
     };
     simd_128ui();
-    simd_128ui(const uint32 all);
-    simd_128ui(const uint32 x, const uint32 y, const uint32 z, const uint32 w);
-    simd_128ui(const uint32* to_place_data);
-    simd_128ui(const std::initializer_list<uint32>& list);
+    simd_128ui(const uint32_t all);
+    simd_128ui(const uint32_t x, const uint32_t y, const uint32_t z, const uint32_t w);
+    simd_128ui(const uint32_t* to_place_data);
+    simd_128ui(const std::initializer_list<uint32_t>& list);
     ~simd_128ui();
 
     simd_128ui(const simd_128ui& other);
@@ -453,9 +453,9 @@ struct alignas(16) simd_128ui : simd_base<simd_128ui> {
 
     simd_128ui& operator=(const simd_128ui& rhs);
     simd_128ui& operator=(simd_128ui&& rhs) noexcept;
-    simd_128ui& operator=(const uint32* to_place_data);
-    simd_128ui& operator=(const std::initializer_list<uint32>& list);
-    simd_128ui& operator=(const uint32 all);
+    simd_128ui& operator=(const uint32_t* to_place_data);
+    simd_128ui& operator=(const std::initializer_list<uint32_t>& list);
+    simd_128ui& operator=(const uint32_t all);
 
     simd_128ui operator+(const simd_128ui& rhs) const;
     simd_128ui& operator+=(const simd_128ui& rhs);
@@ -478,8 +478,8 @@ struct alignas(16) simd_128ui : simd_base<simd_128ui> {
     bool operator==(const simd_128ui& rhs) const;
     bool operator!=(const simd_128ui& rhs) const;
 
-    inline uint32& operator[](uint32 index) { return this->v[index]; }
-    inline const uint32& operator[](uint32 index) const { return this->v[index]; }
+    inline uint32_t& operator[](uint32_t index) { return this->v[index]; }
+    inline const uint32_t& operator[](uint32_t index) const { return this->v[index]; }
 
     static simd_128ui max(const simd_128ui& lhs, const simd_128ui& rhs);
     static simd_128ui min(const simd_128ui& lhs, const simd_128ui& rhs);
@@ -514,21 +514,21 @@ struct alignas(16) simd_128ui : simd_base<simd_128ui> {
 };
 
 /**
- * 128-bit SIMD wrapper for 2 uint64.
+ * 128-bit SIMD wrapper for 2 uint64_t.
  */
 struct alignas(16) simd_128ul : simd_base<simd_128ul> {
     union alignas(16) {
         __m128i data;
-        uint64 v[2];
+        uint64_t v[2];
         struct {
-            uint64 x, y;
+            uint64_t x, y;
         };
     };
     simd_128ul();
-    simd_128ul(const uint64 all);
-    simd_128ul(const uint64 x, const uint64 y);
-    simd_128ul(const uint64* to_place_data);
-    simd_128ul(const std::initializer_list<uint64>& list);
+    simd_128ul(const uint64_t all);
+    simd_128ul(const uint64_t x, const uint64_t y);
+    simd_128ul(const uint64_t* to_place_data);
+    simd_128ul(const std::initializer_list<uint64_t>& list);
     ~simd_128ul();
 
     simd_128ul(const simd_128ul& other);
@@ -536,9 +536,9 @@ struct alignas(16) simd_128ul : simd_base<simd_128ul> {
 
     simd_128ul& operator=(const simd_128ul& rhs);
     simd_128ul& operator=(simd_128ul&& rhs) noexcept;
-    simd_128ul& operator=(const uint64* to_place_data);
-    simd_128ul& operator=(const std::initializer_list<uint64>& list);
-    simd_128ul& operator=(const uint64 all);
+    simd_128ul& operator=(const uint64_t* to_place_data);
+    simd_128ul& operator=(const std::initializer_list<uint64_t>& list);
+    simd_128ul& operator=(const uint64_t all);
 
     simd_128ul operator+(const simd_128ul& rhs) const;
     simd_128ul& operator+=(const simd_128ul& rhs);
@@ -561,8 +561,8 @@ struct alignas(16) simd_128ul : simd_base<simd_128ul> {
     bool operator==(const simd_128ul& rhs) const;
     bool operator!=(const simd_128ul& rhs) const;
 
-    inline uint64& operator[](uint32 index) { return this->v[index]; }
-    inline const uint64& operator[](uint32 index) const { return this->v[index]; }
+    inline uint64_t& operator[](uint32_t index) { return this->v[index]; }
+    inline const uint64_t& operator[](uint32_t index) const { return this->v[index]; }
 
     static simd_128ul max(const simd_128ul& lhs, const simd_128ul& rhs);
     static simd_128ul min(const simd_128ul& lhs, const simd_128ul& rhs);
@@ -575,7 +575,7 @@ struct alignas(16) simd_128ul : simd_base<simd_128ul> {
         use_mode x;
         use_mode y;
 
-        int32 to_int32() const { return (static_cast<int32>(x) & 0x1) | ((static_cast<int32>(y) & 0x1) << 2); }
+       int32_t toint32_t() const { return (static_cast<int32_t>(x) & 0x1) | ((static_cast<int32_t>(y) & 0x1) << 2); }
     };
 
     simd_128ul shuffle(const simd_128ul& other, const shuffle_opts& opts) const;
@@ -617,8 +617,8 @@ struct simd_256d : simd_base<simd_256d> {
 #if EDVAR_CPP_CORE_USE_AVX2
     simd_256d& operator=(const __m256d& other);
 #endif
-    inline double& operator[](uint32 index) { return this->v[index]; }
-    inline const double& operator[](uint32 index) const { return this->v[index]; }
+    inline double& operator[](uint32_t index) { return this->v[index]; }
+    inline const double& operator[](uint32_t index) const { return this->v[index]; }
 
     static simd_256d max(const simd_256d& lhs, const simd_256d& rhs);
     static simd_256d min(const simd_256d& lhs, const simd_256d& rhs);
@@ -651,7 +651,7 @@ struct simd_256d : simd_base<simd_256d> {
     simd_256d horizontal_sub(const simd_256d& rhs) const;
     simd_256d& horizontal_sub_inline(const simd_256d& rhs);
 
-    template <uint8 x, uint8 y, uint8 z, uint8 w> simd_256d& shuffle_inline(){
+    template <uint8_t x, uint8_t y, uint8_t z, uint8_t w> simd_256d& shuffle_inline(){
         static_assert(x < 4 && y < 4 && z < 4 && w < 4, "Shuffle indices must be in the range [0, 3]");
         alignas(32) double temp[4];
         edvar::memory::copy_bytes(temp, &this->data, sizeof(temp));
@@ -662,7 +662,7 @@ struct simd_256d : simd_base<simd_256d> {
         this->w = temp[w];
         return *this;
     }
-    template <uint8 x, uint8 y, uint8 z, uint8 w> simd_256d shuffle() const {
+    template <uint8_t x, uint8_t y, uint8_t z, uint8_t w> simd_256d shuffle() const {
         simd_256d result = *this;
         result.template shuffle_inline<x, y, z, w>();
         return result;
@@ -673,10 +673,10 @@ struct simd_256d : simd_base<simd_256d> {
 
     float dot(const simd_256d& other) const;
 
-    template <uint32 lhs_rows, uint32 lhs_cols, uint32 rhs_original_rows, uint32 rhs_original_cols>
+    template <uint32_t lhs_rows, uint32_t lhs_cols, uint32_t rhs_original_rows, uint32_t rhs_original_cols>
     static void matrix_multiply(const simd_256d** lhs_arr, const simd_256d** transposed_rhs_arr, simd_256d** out) {
         static_assert(lhs_cols == rhs_original_rows, "Matrix multiplication dimension mismatch");
-        static constexpr uint32 simd_col_count = (lhs_cols + 3) / 4; // Each simd_256d holds 4 doubles
+        static constexpr uint32_t simd_col_count = (lhs_cols + 3) / 4; // Each simd_256d holds 4 doubles
 
         // additional optimization when lhs_cols is 1
         if constexpr (simd_col_count == 1) {
@@ -724,22 +724,22 @@ template <> struct simd_traits<simd_128f> {
 template <> struct simd_traits<simd_128i> {
     static constexpr bool is_simd = true;
     static constexpr size_t element_count = 4;
-    using element_type = int32;
+    using element_type =int32_t;
 };
 template <> struct simd_traits<simd_128l> {
     static constexpr bool is_simd = true;
     static constexpr size_t element_count = 2;
-    using element_type = int64;
+    using element_type =int64_t;
 };
 template <> struct simd_traits<simd_128ui> {
     static constexpr bool is_simd = true;
     static constexpr size_t element_count = 4;
-    using element_type = uint32;
+    using element_type = uint32_t;
 };
 template <> struct simd_traits<simd_128ul> {
     static constexpr bool is_simd = true;
     static constexpr size_t element_count = 2;
-    using element_type = uint64;
+    using element_type = uint64_t;
 };
 
 template <> struct simd_traits<simd_256d> {

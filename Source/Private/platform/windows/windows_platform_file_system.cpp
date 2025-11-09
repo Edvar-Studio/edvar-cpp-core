@@ -7,7 +7,6 @@
 #    include "platform/windows/windows_platform_file_system.h"
 #    include "utils/value_or_error.h"
 #    include "utils/optional.h"
-#    include "platform/platform_base.h"
 #    include "utils/value_or_error.h"
 #    include <windows.h>
 #    include <winnt.h>
@@ -22,7 +21,7 @@
 namespace edvar::platform_types {
 
 edvar::value_or_error<platform_file_system::native_file_handle, file_operation_error>
-windows_platform_file_system::open_file(const edvar::string_base<platform_base::char_utf16>& path,
+windows_platform_file_system::open_file(const edvar::string_base<char_utf16>& path,
                                         file_access_mode open_mode, file_share_mode share_mode) {
     DWORD win32_desired_acccess = 0;
     if ((open_mode & file_access_mode::read) == file_access_mode::read) {
@@ -83,8 +82,8 @@ windows_platform_file_system::open_file(const edvar::string_base<platform_base::
     }
     return edvar::value_or_error<native_file_handle, file_operation_error>::from_value(file_handle);
 }
-edvar::value_or_error<platform_base::uint32, file_operation_error>
-windows_platform_file_system::read_file(native_file_handle handle, void* buffer, platform_base::uint32 size) {
+edvar::value_or_error<uint32_t, file_operation_error>
+windows_platform_file_system::read_file(native_file_handle handle, void* buffer, uint32_t size) {
     DWORD bytes_read = 0;
     HANDLE win32_file_handle = reinterpret_cast<HANDLE>(handle);
     if (!::ReadFile(win32_file_handle, buffer, size, &bytes_read, NULL)) {
@@ -92,23 +91,23 @@ windows_platform_file_system::read_file(native_file_handle handle, void* buffer,
         // Map error code to file_operation_error
         switch (error_code) {
         case ERROR_INVALID_HANDLE:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::invalid_file_handle);
         case ERROR_ACCESS_DENIED:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::access_denied);
         case ERROR_SHARING_VIOLATION:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::sharing_violation);
         default:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::unknown_error);
         }
     }
-    return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_value(bytes_read);
+    return edvar::value_or_error<uint32_t, file_operation_error>::from_value(bytes_read);
 }
-edvar::value_or_error<platform_base::uint32, file_operation_error>
-windows_platform_file_system::write_file(native_file_handle handle, const void* buffer, platform_base::uint32 size) {
+edvar::value_or_error<uint32_t, file_operation_error>
+windows_platform_file_system::write_file(native_file_handle handle, const void* buffer, uint32_t size) {
     DWORD bytes_written = 0;
     HANDLE win32_file_handle = reinterpret_cast<HANDLE>(handle);
     if (!::WriteFile(win32_file_handle, buffer, size, &bytes_written, NULL)) {
@@ -116,25 +115,25 @@ windows_platform_file_system::write_file(native_file_handle handle, const void* 
         // Map error code to file_operation_error
         switch (error_code) {
         case ERROR_INVALID_HANDLE:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::invalid_file_handle);
         case ERROR_ACCESS_DENIED:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::access_denied);
         case ERROR_DISK_FULL:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::disk_full);
         case ERROR_SHARING_VIOLATION:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::sharing_violation);
         default:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::unknown_error);
         }
     }
-    return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_value(bytes_written);
+    return edvar::value_or_error<uint32_t, file_operation_error>::from_value(bytes_written);
 }
-edvar::value_or_error<platform_base::uint32, file_operation_error>
+edvar::value_or_error<uint32_t, file_operation_error>
 windows_platform_file_system::flush_file(native_file_handle handle) {
     HANDLE win32_file_handle = reinterpret_cast<HANDLE>(handle);
     if (!::FlushFileBuffers(win32_file_handle)) {
@@ -142,22 +141,22 @@ windows_platform_file_system::flush_file(native_file_handle handle) {
         // Map error code to file_operation_error
         switch (error_code) {
         case ERROR_INVALID_HANDLE:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::invalid_file_handle);
         case ERROR_ACCESS_DENIED:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::access_denied);
         case ERROR_SHARING_VIOLATION:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::sharing_violation);
         default:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::unknown_error);
         }
     }
-    return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_value(0);
+    return edvar::value_or_error<uint32_t, file_operation_error>::from_value(0);
 }
-edvar::value_or_error<platform_base::uint32, file_operation_error>
+edvar::value_or_error<uint32_t, file_operation_error>
 windows_platform_file_system::close_file(native_file_handle handle) {
     HANDLE win32_file_handle = reinterpret_cast<HANDLE>(handle);
     if (!::CloseHandle(win32_file_handle)) {
@@ -165,22 +164,22 @@ windows_platform_file_system::close_file(native_file_handle handle) {
         // Map error code to file_operation_error
         switch (error_code) {
         case ERROR_INVALID_HANDLE:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::invalid_file_handle);
         case ERROR_ACCESS_DENIED:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::access_denied);
         case ERROR_SHARING_VIOLATION:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::sharing_violation);
         default:
-            return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_error(
+            return edvar::value_or_error<uint32_t, file_operation_error>::from_error(
                 file_operation_error::unknown_error);
         }
     }
-    return edvar::value_or_error<platform_base::uint32, file_operation_error>::from_value(0);
+    return edvar::value_or_error<uint32_t, file_operation_error>::from_value(0);
 }
-bool windows_platform_file_system::file_exists(const edvar::string_base<platform_base::char_utf16>& path) {
+bool windows_platform_file_system::file_exists(const edvar::string_base<char_utf16>& path) {
     DWORD attributes = GetFileAttributesW(reinterpret_cast<const wchar_t*>(path.data()));
     if (attributes == INVALID_FILE_ATTRIBUTES) {
         return false;
@@ -188,7 +187,7 @@ bool windows_platform_file_system::file_exists(const edvar::string_base<platform
     return (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
 edvar::error_result<file_operation_error>
-windows_platform_file_system::create_file(const edvar::string_base<platform_base::char_utf16>& path) {
+windows_platform_file_system::create_file(const edvar::string_base<char_utf16>& path) {
     HANDLE file_handle = ::CreateFileW(reinterpret_cast<LPCWSTR>(path.data()), GENERIC_WRITE, 0, NULL, CREATE_NEW,
                                        FILE_ATTRIBUTE_NORMAL, NULL);
     if (file_handle == INVALID_HANDLE_VALUE) {
@@ -211,7 +210,7 @@ windows_platform_file_system::create_file(const edvar::string_base<platform_base
     return edvar::error_result<file_operation_error>();
 }
 edvar::error_result<file_operation_error>
-windows_platform_file_system::delete_file(const edvar::string_base<platform_base::char_utf16>& path) {
+windows_platform_file_system::delete_file(const edvar::string_base<char_utf16>& path) {
     if (!::DeleteFileW(reinterpret_cast<LPCWSTR>(path.data()))) {
         DWORD error_code = GetLastError();
         // Map error code to file_operation_error
@@ -232,8 +231,8 @@ windows_platform_file_system::delete_file(const edvar::string_base<platform_base
 }
 
 edvar::error_result<file_operation_error>
-windows_platform_file_system::move_file(const edvar::string_base<platform_base::char_utf16>& from,
-                                        const edvar::string_base<platform_base::char_utf16>& to) {
+windows_platform_file_system::move_file(const edvar::string_base<char_utf16>& from,
+                                        const edvar::string_base<char_utf16>& to) {
     if (!::MoveFileW(reinterpret_cast<LPCWSTR>(from.data()), reinterpret_cast<LPCWSTR>(to.data()))) {
         DWORD error_code = GetLastError();
         // Map error code to file_operation_error
@@ -254,8 +253,8 @@ windows_platform_file_system::move_file(const edvar::string_base<platform_base::
 }
 
 edvar::error_result<file_operation_error>
-windows_platform_file_system::copy_file(const edvar::string_base<platform_base::char_utf16>& from,
-                                        const edvar::string_base<platform_base::char_utf16>& to) {
+windows_platform_file_system::copy_file(const edvar::string_base<char_utf16>& from,
+                                        const edvar::string_base<char_utf16>& to) {
     if (!::CopyFileW(reinterpret_cast<LPCWSTR>(from.data()), reinterpret_cast<LPCWSTR>(to.data()), FALSE)) {
         DWORD error_code = GetLastError();
         // Map error code to file_operation_error
@@ -298,10 +297,10 @@ file_time_result windows_platform_file_system::get_file_modification_time(const 
     ull.HighPart = modification_time.dwHighDateTime;
     // FILETIME is in 100-nanosecond intervals since January 1, 1601 (UTC)
     // edvar::time is assumed to be in nanoseconds since January 1, 1970 (UTC)
-    uint64 filetime_ns = ull.QuadPart * 100; // Convert to nanoseconds
+    uint64_t filetime_ns = ull.QuadPart * 100; // Convert to nanoseconds
     // Calculate the difference between 1601 and 1970 in nanoseconds
-    static constexpr uint64 EPOCH_DIFFERENCE_NS = 116444736000000000ULL;
-    uint64 unix_time_ns = filetime_ns - EPOCH_DIFFERENCE_NS;
+    static constexpr uint64_t EPOCH_DIFFERENCE_NS = 116444736000000000ULL;
+    uint64_t unix_time_ns = filetime_ns - EPOCH_DIFFERENCE_NS;
     return file_time_result::from_value(edvar::time(unix_time_ns));
 }
 file_time_result windows_platform_file_system::get_file_creation_time(const native_file_handle& handle) {
@@ -327,10 +326,10 @@ file_time_result windows_platform_file_system::get_file_creation_time(const nati
     ull.HighPart = creation_time.dwHighDateTime;
     // FILETIME is in 100-nanosecond intervals since January 1, 1601 (UTC)
     // edvar::time is assumed to be in nanoseconds since January 1, 1970 (UTC)
-    uint64 filetime_ns = ull.QuadPart * 100; // Convert to nanoseconds
+    uint64_t filetime_ns = ull.QuadPart * 100; // Convert to nanoseconds
     // Calculate the difference between 1601 and 1970 in nanoseconds
-    static constexpr uint64 EPOCH_DIFFERENCE_NS = 116444736000000000ULL;
-    uint64 unix_time_ns = filetime_ns - EPOCH_DIFFERENCE_NS;
+    static constexpr uint64_t EPOCH_DIFFERENCE_NS = 116444736000000000ULL;
+    uint64_t unix_time_ns = filetime_ns - EPOCH_DIFFERENCE_NS;
     return file_time_result::from_value(edvar::time(unix_time_ns));
 }
 file_time_result windows_platform_file_system::get_file_access_time(const native_file_handle& handle) {
@@ -356,10 +355,10 @@ file_time_result windows_platform_file_system::get_file_access_time(const native
     ull.HighPart = access_time.dwHighDateTime;
     // FILETIME is in 100-nanosecond intervals since January 1, 1601 (UTC)
     // edvar::time is assumed to be in nanoseconds since January 1, 1970 (UTC)
-    uint64 filetime_ns = ull.QuadPart * 100; // Convert to nanoseconds
+    uint64_t filetime_ns = ull.QuadPart * 100; // Convert to nanoseconds
     // Calculate the difference between 1601 and 1970 in nanoseconds
-    static constexpr uint64 EPOCH_DIFFERENCE_NS = 116444736000000000ULL;
-    uint64 unix_time_ns = filetime_ns - EPOCH_DIFFERENCE_NS;
+    static constexpr uint64_t EPOCH_DIFFERENCE_NS = 116444736000000000ULL;
+    uint64_t unix_time_ns = filetime_ns - EPOCH_DIFFERENCE_NS;
     return file_time_result::from_value(edvar::time(unix_time_ns));
 }
 
@@ -367,9 +366,9 @@ file_time_result windows_platform_file_system::set_file_modification_time(const 
                                                                           const edvar::time& time) {
     HANDLE win32_file_handle = reinterpret_cast<HANDLE>(handle);
     // Convert edvar::time to FILETIME
-    uint64 unix_time_ns = time.to_nanoseconds();
-    static constexpr uint64 EPOCH_DIFFERENCE_NS = 116444736000000000ULL;
-    uint64 filetime_ns = unix_time_ns + EPOCH_DIFFERENCE_NS;
+    uint64_t unix_time_ns = time.to_nanoseconds();
+    static constexpr uint64_t EPOCH_DIFFERENCE_NS = 116444736000000000ULL;
+    uint64_t filetime_ns = unix_time_ns + EPOCH_DIFFERENCE_NS;
     ULARGE_INTEGER ull;
     ull.QuadPart = filetime_ns / 100; // Convert to 100-nanosecond intervals
     FILETIME modification_time;
@@ -395,9 +394,9 @@ file_time_result windows_platform_file_system::set_file_creation_time(const nati
                                                                       const edvar::time& time) {
     HANDLE win32_file_handle = reinterpret_cast<HANDLE>(handle);
     // Convert edvar::time to FILETIME
-    uint64 unix_time_ns = time.to_nanoseconds();
-    static constexpr uint64 EPOCH_DIFFERENCE_NS = 116444736000000000ULL;
-    uint64 filetime_ns = unix_time_ns + EPOCH_DIFFERENCE_NS;
+    uint64_t unix_time_ns = time.to_nanoseconds();
+    static constexpr uint64_t EPOCH_DIFFERENCE_NS = 116444736000000000ULL;
+    uint64_t filetime_ns = unix_time_ns + EPOCH_DIFFERENCE_NS;
     ULARGE_INTEGER ull;
     ull.QuadPart = filetime_ns / 100; // Convert to 100-nanosecond intervals
     FILETIME creation_time;
@@ -423,9 +422,9 @@ file_time_result windows_platform_file_system::set_file_access_time(const native
                                                                     const edvar::time& time) {
     HANDLE win32_file_handle = reinterpret_cast<HANDLE>(handle);
     // Convert edvar::time to FILETIME
-    uint64 unix_time_ns = time.to_nanoseconds();
-    static constexpr uint64 EPOCH_DIFFERENCE_NS = 116444736000000000ULL;
-    uint64 filetime_ns = unix_time_ns + EPOCH_DIFFERENCE_NS;
+    uint64_t unix_time_ns = time.to_nanoseconds();
+    static constexpr uint64_t EPOCH_DIFFERENCE_NS = 116444736000000000ULL;
+    uint64_t filetime_ns = unix_time_ns + EPOCH_DIFFERENCE_NS;
     ULARGE_INTEGER ull;
     ull.QuadPart = filetime_ns / 100; // Convert to 100-nanosecond intervals
     FILETIME last_access_time;
@@ -448,7 +447,7 @@ file_time_result windows_platform_file_system::set_file_access_time(const native
     return file_time_result::from_value(time);
 }
 edvar::error_result<file_operation_error>
-windows_platform_file_system::create_directory(const edvar::string_base<platform_base::char_utf16>& path) {
+windows_platform_file_system::create_directory(const edvar::string_base<char_utf16>& path) {
     if (!::CreateDirectoryW(reinterpret_cast<LPCWSTR>(path.data()), NULL)) {
         DWORD error_code = GetLastError();
         // Map error code to file_operation_error
@@ -468,7 +467,7 @@ windows_platform_file_system::create_directory(const edvar::string_base<platform
     return edvar::error_result<file_operation_error>();
 }
 edvar::error_result<file_operation_error>
-windows_platform_file_system::delete_directory(const edvar::string_base<platform_base::char_utf16>& path) {
+windows_platform_file_system::delete_directory(const edvar::string_base<char_utf16>& path) {
     if (!::RemoveDirectoryW(reinterpret_cast<LPCWSTR>(path.data()))) {
         DWORD error_code = GetLastError();
         // Map error code to file_operation_error
@@ -488,9 +487,9 @@ windows_platform_file_system::delete_directory(const edvar::string_base<platform
     return edvar::error_result<file_operation_error>();
 }
 edvar::value_or_error<edvar::array<platform_file_system::directory_content_entry>, file_operation_error>
-windows_platform_file_system::list_directory_contents(const edvar::string_base<platform_base::char_utf16>& path) {
+windows_platform_file_system::list_directory_contents(const edvar::string_base<char_utf16>& path) {
     edvar::array<directory_content_entry> entries;
-    edvar::string_base<platform_base::char_utf16> search_path = path + L"\\*";
+    edvar::string_base<char_utf16> search_path = path + L"\\*";
     WIN32_FIND_DATAW find_data;
     HANDLE hFind = ::FindFirstFileW(reinterpret_cast<LPCWSTR>(search_path.data()), &find_data);
     if (hFind == INVALID_HANDLE_VALUE) {
@@ -517,7 +516,7 @@ windows_platform_file_system::list_directory_contents(const edvar::string_base<p
 
     do {
         directory_content_entry entry;
-        entry.name = edvar::string_base<platform_base::char_utf16>(find_data.cFileName);
+        entry.name = edvar::string_base<char_utf16>(find_data.cFileName);
         entry.is_directory = (find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
         entries.add(entry);
     } while (::FindNextFileW(hFind, &find_data));
@@ -525,21 +524,21 @@ windows_platform_file_system::list_directory_contents(const edvar::string_base<p
     ::FindClose(hFind);
     return edvar::value_or_error<edvar::array<directory_content_entry>, file_operation_error>::from_value(entries);
 }
-edvar::string_base<platform_base::char_utf16> windows_platform_file_system::get_current_working_directory() {
+edvar::string_base<char_utf16> windows_platform_file_system::get_current_working_directory() {
     // Get the required buffer size
     DWORD buffer_size = ::GetCurrentDirectoryW(0, NULL);
-    edvar::string_base<platform_base::char_utf16> buffer;
+    edvar::string_base<char_utf16> buffer;
     buffer.resize(buffer_size);
     ::GetCurrentDirectoryW(buffer_size, reinterpret_cast<LPWSTR>(buffer.data()));
     return buffer;
 }
-edvar::string_base<platform_base::char_utf16>
-windows_platform_file_system::set_current_working_directory(const edvar::string_base<platform_base::char_utf16>& path) {
+edvar::string_base<char_utf16>
+windows_platform_file_system::set_current_working_directory(const edvar::string_base<char_utf16>& path) {
     ::SetCurrentDirectoryW(reinterpret_cast<LPCWSTR>(path.data()));
     return get_current_working_directory();
 }
-edvar::string_base<platform_base::char_utf16>
-windows_platform_file_system::get_special_directory(const edvar::string_base<platform_base::char_utf16>& name) {
+edvar::string_base<char_utf16>
+windows_platform_file_system::get_special_directory(const edvar::string_base<char_utf16>& name) {
     auto folder_id = FOLDERID_Profile; // Default to Profile
     if (name == "home" || name == "user_home") {
         folder_id = FOLDERID_Profile;
@@ -572,31 +571,31 @@ windows_platform_file_system::get_special_directory(const edvar::string_base<pla
         folder_id = FOLDERID_LocalAppData;
     } else if (name == "temp") {
         DWORD length = GetTempPathW(0, NULL); // Get required buffer size
-        edvar::string_base<platform_base::char_utf16> temp_path;
+        edvar::string_base<char_utf16> temp_path;
         temp_path.resize(length);
         GetTempPathW(length, reinterpret_cast<LPWSTR>(temp_path.data()));
         return temp_path;
     } else {
-        return edvar::string_base<platform_base::char_utf16>();
+        return edvar::string_base<char_utf16>();
     }
     wchar_t* path_buffer = nullptr;
     if (SUCCEEDED(SHGetKnownFolderPath(folder_id, 0, NULL, &path_buffer))) {
-        edvar::string_base<platform_base::char_utf16> result(path_buffer);
+        edvar::string_base<char_utf16> result(path_buffer);
         CoTaskMemFree(path_buffer);
         return result;
     }
-    return edvar::string_base<platform_base::char_utf16>();
+    return edvar::string_base<char_utf16>();
 }
-edvar::container::array<edvar::string_base<platform_base::char_utf16>>
-windows_platform_file_system::native_open_dialog(const edvar::string_base<platform_base::char_utf16>& title,
+edvar::container::array<edvar::string_base<char_utf16>>
+windows_platform_file_system::native_open_dialog(const edvar::string_base<char_utf16>& title,
                                                  const edvar::container::array<file_dialog_filter>& filters,
                                                  bool allow_multiple_selection, bool pick_folders, bool file_must_exist,
-                                                 const edvar::string_base<platform_base::char_utf16>& default_path,
-                                                 const edvar::string_base<platform_base::char_utf16>& default_extension,
+                                                 const edvar::string_base<char_utf16>& default_path,
+                                                 const edvar::string_base<char_utf16>& default_extension,
                                                  platform_windowing_system::native_window_handle parent_window) {
     IFileOpenDialog* pFileOpen;
     HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFileOpen));
-    edvar::container::array<edvar::string_base<platform_base::char_utf16>> selected_paths;
+    edvar::container::array<edvar::string_base<char_utf16>> selected_paths;
     if (SUCCEEDED(hr)) {
         pFileOpen->SetTitle(reinterpret_cast<const wchar_t*>(title.data()));
         pFileOpen->SetDefaultExtension(reinterpret_cast<const wchar_t*>(default_extension.data()));
@@ -654,7 +653,7 @@ windows_platform_file_system::native_open_dialog(const edvar::string_base<platfo
                         PWSTR pszFilePath = NULL;
                         hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
                         if (SUCCEEDED(hr)) {
-                            selected_paths.add(edvar::string_base<platform_base::char_utf16>(pszFilePath));
+                            selected_paths.add(edvar::string_base<char_utf16>(pszFilePath));
                             CoTaskMemFree(pszFilePath);
                         }
                         pItem->Release();
@@ -667,17 +666,17 @@ windows_platform_file_system::native_open_dialog(const edvar::string_base<platfo
     }
     return selected_paths;
 }
-edvar::container::array<edvar::string_base<platform_base::char_utf16>>
-windows_platform_file_system::native_save_dialog(const edvar::string_base<platform_base::char_utf16>& title,
+edvar::container::array<edvar::string_base<char_utf16>>
+windows_platform_file_system::native_save_dialog(const edvar::string_base<char_utf16>& title,
                                                  const edvar::container::array<file_dialog_filter>& filters,
                                                  bool prompt_overwrite,
-                                                 const edvar::string_base<platform_base::char_utf16>& default_file_name,
-                                                 const edvar::string_base<platform_base::char_utf16>& default_path,
-                                                 const edvar::string_base<platform_base::char_utf16>& default_extension,
+                                                 const edvar::string_base<char_utf16>& default_file_name,
+                                                 const edvar::string_base<char_utf16>& default_path,
+                                                 const edvar::string_base<char_utf16>& default_extension,
                                                  platform_windowing_system::native_window_handle parent_window) {
     IFileSaveDialog* pFileSave;
     HRESULT hr = CoCreateInstance(CLSID_FileSaveDialog, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&pFileSave));
-    edvar::container::array<edvar::string_base<platform_base::char_utf16>> selected_paths;
+    edvar::container::array<edvar::string_base<char_utf16>> selected_paths;
     if (SUCCEEDED(hr)) {
         pFileSave->SetTitle(reinterpret_cast<const wchar_t*>(title.data()));
         pFileSave->SetDefaultExtension(reinterpret_cast<const wchar_t*>(default_extension.data()));
@@ -727,7 +726,7 @@ windows_platform_file_system::native_save_dialog(const edvar::string_base<platfo
                 PWSTR pszFilePath = NULL;
                 hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
                 if (SUCCEEDED(hr)) {
-                    selected_paths.add(edvar::string_base<platform_base::char_utf16>(pszFilePath));
+                    selected_paths.add(edvar::string_base<char_utf16>(pszFilePath));
                     CoTaskMemFree(pszFilePath);
                 }
                 pItem->Release();
@@ -736,6 +735,13 @@ windows_platform_file_system::native_save_dialog(const edvar::string_base<platfo
         pFileSave->Release();
     }
     return selected_paths;
+}
+bool windows_platform_file_system::directory_exists(const edvar::string_base<char_utf16>& path) {
+    DWORD attributes = ::GetFileAttributesW(reinterpret_cast<LPCWSTR>(path.data()));
+    if (attributes == INVALID_FILE_ATTRIBUTES) {
+        return false;
+    }
+    return (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
 }
 } // namespace edvar::platform_types
 #endif

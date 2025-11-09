@@ -18,9 +18,9 @@ public:
     static_assert(std::is_move_constructible_v<storage_type> || std::is_copy_constructible_v<storage_type>,
                   "Type stored in edvar::container::array must be either move-constructible or copy-constructible");
 
-    typedef value_or_error_code<int32> indexed_result;
+    typedef value_or_error_code<int32_t> indexed_result;
     array();
-    array(std::remove_reference_t<storage_type>* elems, uint32 size);
+    array(std::remove_reference_t<storage_type>* elems, uint32_t size);
     array(const array& other);
     array(const std::initializer_list<storage_type>& init_list);
     array(array&& other) noexcept;
@@ -30,13 +30,13 @@ public:
      * Get the number of elements stored in this array.
      * @returns Number of elements in the array.
      */
-    inline int32 length() const { return _size; }
+    inline int32_t length() const { return _size; }
     /**
      * Get the current capacity of this array. If the allocator allows, this can be
      * dynamically increased as needed when adding elements.
      * @returns Current capacity of the array.
      */
-    inline int32 capacity() const { return _capacity; }
+    inline int32_t capacity() const { return _capacity; }
     /**
      * Get a pointer to the internal data array. This pointer may be invalidated
      * when adding or removing elements.
@@ -62,6 +62,22 @@ public:
      * @returns Indexed result containing the index if found, or an error code if not found.
      */
     indexed_result find(const storage_type& value) const;
+    /**
+     * Check if the array contains a given value.
+     * @param value The value to search for.
+     * @returns True if the value is found in the array, false otherwise.
+     */
+    inline bool contains(const storage_type& value) const {
+        return !find(value).is_error();
+    }
+    /**
+     * Check if the given index is valid for this array.
+     * @param index The index to check.
+     * @returns True if the index is valid, false otherwise.
+     */
+    inline bool is_valid_index(const int32_t index) const {
+        return index >= 0 && index < _size;
+    }
     /**
      * Find the first occurrence of a value in the array that matches a given predicate
      * and return its index. If not found, returns an error code. The code doesn't have a specific meaning
@@ -118,7 +134,7 @@ public:
      * Remove all elements from the array, optionally setting a new capacity.
      * @param new_capacity The new capacity to set after emptying the array. Default is 0.
      */
-    void empty(uint32 new_capacity = 0);
+    void empty(uint32_t new_capacity = 0);
     /**
      * Append elements from an initializer list to the array.
      * @param init_list The initializer list containing elements to append.
@@ -135,7 +151,7 @@ public:
      * @param in_array Pointer to the raw array containing elements to append.
      * @param element_count Number of elements in the raw array.
      */
-    void append(std::remove_reference_t<storage_type>* in_array, uint32 element_count);
+    void append(std::remove_reference_t<storage_type>* in_array, uint32_t element_count);
     /**
      * Append elements from an array view to this array.
      * @param view The array view containing elements to append.
@@ -146,13 +162,13 @@ public:
      * @param index The index of the element to access.
      * @returns A const reference to the element at the given index.
      */
-    inline const storage_type& operator[](int32 index) const { return _data[index]; }
+    inline const storage_type& operator[](int32_t index) const { return _data[index]; }
     /**
      * Access an element at a given index without checking bounds.
      * @param index The index of the element to access.
      * @returns A reference to the element at the given index.
      */
-    inline storage_type& operator[](int32 index) { return _data[index]; }
+    inline storage_type& operator[](int32_t index) { return _data[index]; }
     /**
      * Add an element to the end of the array by copy-constructing it.
      * Enabled only if storage_type is copy-constructible.
@@ -160,7 +176,7 @@ public:
      * @returns The index of the newly added element.
      */
     template <std::enable_if_t<std::is_copy_constructible_v<storage_type>, bool> = true>
-    int32 add(const storage_type& value);
+    int32_t add(const storage_type& value);
     /**
      * Add an element to the end of the array by move-constructing it.
      * Enabled only if storage_type is move-constructible.
@@ -168,48 +184,47 @@ public:
      * @returns The index of the newly added element.
      */
     template <std::enable_if_t<std::is_move_constructible_v<storage_type>, bool> = true>
-    int32 add(std::remove_cvref_t<storage_type>&& value);
+    int32_t add(std::remove_cvref_t<storage_type>&& value);
 
     /**
      * Construct and add an element to the end of the array in place.
      * @param args The arguments to forward to the constructor of storage_type.
      * @returns The index of the newly added element.
      */
-    template <typename... Args> int32 emplace(Args&&... args);
+    template <typename... Args> int32_t emplace(Args&&... args);
     /**
      * Add multiple default-initialized elements to the end of the array.
      * @param count The number of elements to add.
      */
-    void add_initialized(const int32 count);
+    void add_initialized(const int32_t count);
 
     /**
      * Add multiple uninitialized elements to the end of the array.
      * @param count The number of elements to add.
      */
-    void add_uninitialized(const int32 count);
+    void add_uninitialized(const int32_t count);
     /**
      * Insert an element at a specific index, shifting subsequent elements.
      * @param index The index at which to insert the element.
      * @param value The value to insert.
      */
-    void insert(int32 index, const storage_type& value);
+    void insert(int32_t index, const storage_type& value);
     /**
-     * Insert an element at a specific index, shifting subsequent elements.
-     * @param index The index at which to insert the element.
-     * @param value The value to insert.
+     * Remove all occurrences of a specific value from the array.
+     * @param value The value to remove.
      */
-    void remove_at(int32 index);
+    void remove(const storage_type& value);
     /**
-     * Remove and return an element at a specific index, shifting subsequent elements.
-     * @param index The index of the element to remove.
+     * Remove an element at a specific index, shifting subsequent elements.
+     * @param index The index at which to remove the element.
      * @returns The removed element.
      */
-    storage_type remove_at_value(int32 index);
+    storage_type remove_at(int32_t index);
     /**
      * Ensure the array has at least the specified capacity, reallocating if necessary.
      * @param new_size The desired minimum capacity.
      */
-    void ensure_capacity(int32 new_size);
+    void ensure_capacity(int32_t new_size);
     /**
      * Shrink the array's capacity to match its current size, freeing unused memory.
      */
@@ -219,14 +234,14 @@ public:
      * @returns An array view representing the current elements in the array.
      */
     container::array_view<storage_type> to_view() {
-        return array_view<storage_type>(_data, static_cast<uint32>(_size));
+        return array_view<storage_type>(_data, static_cast<uint32_t>(_size));
     }
     /**
      * Create a const array view from the array.
      * @returns A const array view representing the current elements in the array.
      */
     const container::array_view<storage_type> to_view() const {
-        return array_view<storage_type>(_data, static_cast<uint32>(_size));
+        return array_view<storage_type>(_data, static_cast<uint32_t>(_size));
     }
     /**
      * Copy assignment operator.
@@ -282,8 +297,8 @@ public:
 private:
     allocator_type _allocator;
     std::remove_reference_t<storage_type>* _data;
-    int32 _size;
-    int32 _capacity;
+    int32_t _size;
+    int32_t _capacity;
 };
 
 template <typename storage_type, typename allocator_type>
@@ -294,10 +309,10 @@ inline void array<storage_type, allocator_type>::append(const array_view<storage
 template <typename storage_type, typename allocator_type> inline void array<storage_type, allocator_type>::shrink() {
     if (_size < _capacity) {
         storage_type* new_data = _allocator.allocate(_size);
-        for (int32 i = 0; i < _size; ++i) {
-            new (&new_data[i]) storage_type(edvar::move(_data[i]));
+        for (int32_t i = 0; i < _size; ++i) {
+            new (&new_data[i]) storage_type(std::move(_data[i]));
         }
-        for (int32 i = 0; i < _size; ++i)
+        for (int32_t i = 0; i < _size; ++i)
             _data[i].~storage_type();
         _allocator.deallocate(_data);
         _data = new_data;
@@ -318,9 +333,9 @@ template <typename storage_type, typename allocator_type>
 inline array<storage_type, allocator_type>& array<storage_type, allocator_type>::operator=(array&& other) noexcept {
     if (this != &other) {
         empty(other._capacity);
-        _data = edvar::move(other._data);
-        _size = edvar::move(other._size);
-        _allocator = edvar::move(other._allocator);
+        _data = std::move(other._data);
+        _size = std::move(other._size);
+        _allocator = std::move(other._allocator);
         other._data = nullptr;
         other._size = 0;
         other._capacity = 0;
@@ -329,40 +344,50 @@ inline array<storage_type, allocator_type>& array<storage_type, allocator_type>:
 }
 
 template <typename storage_type, typename allocator_type>
-inline void array<storage_type, allocator_type>::ensure_capacity(int32 new_size) {
+inline void array<storage_type, allocator_type>::ensure_capacity(int32_t new_size) {
     if (new_size > _capacity) {
-        int32 new_capacity = _capacity == 0 ? 1 : _capacity;
+        int32_t new_capacity = _capacity == 0 ? 1 : _capacity;
         while (new_capacity < new_size) {
             new_capacity *= 2;
         }
         storage_type* new_data = _allocator.allocate(new_capacity);
         // Move-construct into new storage using placement-new with exception safety
         // Move-construct into new storage using placement-new
-        for (int32 i = 0; i < _size; ++i) {
-            new (&new_data[i]) storage_type(edvar::move(_data[i]));
+        for (int32_t i = 0; i < _size; ++i) {
+            new (&new_data[i]) storage_type(std::move(_data[i]));
         }
         // destroy old elements
-        for (int32 i = 0; i < _size; ++i)
+        for (int32_t i = 0; i < _size; ++i)
             _data[i].~storage_type();
         _allocator.deallocate(_data);
         _data = new_data;
         _capacity = new_capacity;
     }
 }
+template <typename storage_type, typename allocator_type>
+void array<storage_type, allocator_type>::remove(const storage_type& value) {
+    for (int32_t i = 0; i < _size;) [[unlikely]] {
+        if (_data[i] == value) {
+            remove_at(i);
+        } else {
+            ++i;
+        }
+    }
+}
 
 template <typename storage_type, typename allocator_type>
-inline storage_type array<storage_type, allocator_type>::remove_at_value(int32 index) {
+inline storage_type array<storage_type, allocator_type>::remove_at(int32_t index) {
     edvar::container::utilities::check_bounds(0, _size - 1, index);
-    uint32 uindex = static_cast<uint32>(index);
-    storage_type removed = edvar::move(_data[uindex]);
+    uint32_t uindex = static_cast<uint32_t>(index);
+    storage_type removed = std::move(_data[uindex]);
     // destroy source and shift remaining
     _data[uindex].~storage_type();
-    for (uint32 i = uindex; i < static_cast<uint32>(_size) - 1; ++i) {
+    for (uint32_t i = uindex; i < static_cast<uint32_t>(_size) - 1; ++i) {
         if constexpr (std::is_nothrow_move_assignable_v<storage_type>) {
-            _data[i] = edvar::move(_data[i + 1]);
+            _data[i] = std::move(_data[i + 1]);
             _data[i + 1].~storage_type();
         } else {
-            new (&_data[i]) storage_type(edvar::move(_data[i + 1]));
+            new (&_data[i]) storage_type(std::move(_data[i + 1]));
             _data[i + 1].~storage_type();
         }
     }
@@ -371,37 +396,19 @@ inline storage_type array<storage_type, allocator_type>::remove_at_value(int32 i
 }
 
 template <typename storage_type, typename allocator_type>
-inline void array<storage_type, allocator_type>::remove_at(int32 index) {
-    edvar::container::utilities::check_bounds(0, _size - 1, index);
-    uint32 uindex = static_cast<uint32>(index);
-    // destroy the element and shift subsequent elements down; prefer move-assignment
-    _data[uindex].~storage_type();
-    for (uint32 i = uindex; i < static_cast<uint32>(_size) - 1; ++i) {
-        if constexpr (std::is_nothrow_move_assignable_v<storage_type>) {
-            _data[i] = edvar::move(_data[i + 1]);
-            _data[i + 1].~storage_type();
-        } else {
-            new (&_data[i]) storage_type(edvar::move(_data[i + 1]));
-            _data[i + 1].~storage_type();
-        }
-    }
-    --_size;
-}
-
-template <typename storage_type, typename allocator_type>
-inline void array<storage_type, allocator_type>::insert(int32 index, const storage_type& value) {
+inline void array<storage_type, allocator_type>::insert(int32_t index, const storage_type& value) {
     edvar::container::utilities::check_bounds(0, _size, index);
-    ensure_capacity(static_cast<uint32>(_size) + 1);
+    ensure_capacity(static_cast<uint32_t>(_size) + 1);
     // make room: construct tail slot
-    new (&_data[_size]) storage_type(edvar::move(_data[_size - 1]));
+    new (&_data[_size]) storage_type(std::move(_data[_size - 1]));
     // shift elements up; prefer noexcept move-assignment when available
-    for (uint32 i = static_cast<uint32>(_size) - 1; i > static_cast<uint32>(index); --i) {
+    for (uint32_t i = static_cast<uint32_t>(_size) - 1; i > static_cast<uint32_t>(index); --i) {
         if constexpr (std::is_nothrow_move_assignable_v<storage_type> || std::is_move_assignable_v<storage_type>) {
             // if there is noexcept move-assignment, use it
-            _data[i] = edvar::move(_data[i - 1]);
+            _data[i] = std::move(_data[i - 1]);
         } else {
             // if there is no noexcept move-assignment, use placement-new + move-construction + destroy old
-            new (&_data[i]) storage_type(edvar::move(_data[i - 1]));
+            new (&_data[i]) storage_type(std::move(_data[i - 1]));
             _data[i - 1].~storage_type();
         }
     }
@@ -414,16 +421,16 @@ inline void array<storage_type, allocator_type>::insert(int32 index, const stora
 }
 
 template <typename storage_type, typename allocator_type>
-inline void array<storage_type, allocator_type>::add_uninitialized(const int32 count) {
-    ensure_capacity(static_cast<uint32>(_size) + count);
+inline void array<storage_type, allocator_type>::add_uninitialized(const int32_t count) {
+    ensure_capacity(static_cast<uint32_t>(_size) + count);
     // leave memory uninitialized, but increase size value to reflect reserved slots
     _size += count;
 }
 
 template <typename storage_type, typename allocator_type>
-inline void array<storage_type, allocator_type>::add_initialized(const int32 count) {
-    ensure_capacity(static_cast<uint32>(_size) + count);
-    for (int32 i = 0; i < count; ++i) {
+inline void array<storage_type, allocator_type>::add_initialized(const int32_t count) {
+    ensure_capacity(static_cast<uint32_t>(_size) + count);
+    for (int32_t i = 0; i < count; ++i) {
         new (&_data[_size + i]) storage_type();
     }
     _size += count;
@@ -431,27 +438,27 @@ inline void array<storage_type, allocator_type>::add_initialized(const int32 cou
 
 template <typename storage_type, typename allocator_type>
 template <typename... Args>
-inline int32 array<storage_type, allocator_type>::emplace(Args&&... args) {
-    ensure_capacity(static_cast<uint32>(_size) + 1);
-    new (&_data[_size]) storage_type(edvar::forward<Args>(args)...);
+inline int32_t array<storage_type, allocator_type>::emplace(Args&&... args) {
+    ensure_capacity(static_cast<uint32_t>(_size) + 1);
+    new (&_data[_size]) storage_type(std::forward<Args>(args)...);
     ++_size;
     return _size - 1;
 }
 
 template <typename storage_type, typename allocator_type>
 template <std::enable_if_t<std::is_move_constructible_v<storage_type>, bool>>
-inline int32 array<storage_type, allocator_type>::add(std::remove_cvref_t<storage_type>&& value) {
-    ensure_capacity(static_cast<uint32>(_size) + 1);
+inline int32_t array<storage_type, allocator_type>::add(std::remove_cvref_t<storage_type>&& value) {
+    ensure_capacity(static_cast<uint32_t>(_size) + 1);
     // placement-new move-construct in place
-    new (&_data[_size]) storage_type(edvar::move(value));
+    new (&_data[_size]) storage_type(std::move(value));
     ++_size;
     return _size - 1;
 }
 
 template <typename storage_type, typename allocator_type>
 template <std::enable_if_t<std::is_copy_constructible_v<storage_type>, bool>>
-inline int32 array<storage_type, allocator_type>::add(const storage_type& value) {
-    ensure_capacity(static_cast<uint32>(_size) + 1);
+inline int32_t array<storage_type, allocator_type>::add(const storage_type& value) {
+    ensure_capacity(static_cast<uint32_t>(_size) + 1);
     // placement-new copy-construct in place
     new (&_data[_size]) storage_type(value);
     ++_size;
@@ -460,9 +467,9 @@ inline int32 array<storage_type, allocator_type>::add(const storage_type& value)
 
 template <typename storage_type, typename allocator_type>
 inline void array<storage_type, allocator_type>::append(std::remove_reference_t<storage_type>* in_array,
-                                                        uint32 element_count) {
+                                                        uint32_t element_count) {
     ensure_capacity(_size + element_count);
-    for (uint32 i = 0; i < element_count; ++i) {
+    for (uint32_t i = 0; i < element_count; ++i) {
         new (&_data[_size]) storage_type(in_array[i]);
     }
     _size += element_count;
@@ -483,9 +490,9 @@ inline void array<storage_type, allocator_type>::append(const std::initializer_l
 }
 
 template <typename storage_type, typename allocator_type>
-inline void array<storage_type, allocator_type>::empty(uint32 new_capacity) {
+inline void array<storage_type, allocator_type>::empty(uint32_t new_capacity) {
     // destroy existing elements
-    for (uint32 i = 0; i < static_cast<uint32>(_size); ++i) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(_size); ++i) {
         _data[i].~storage_type();
     }
     _allocator.deallocate(_data);
@@ -500,7 +507,7 @@ inline void array<storage_type, allocator_type>::empty(uint32 new_capacity) {
 template <typename storage_type, typename allocator_type>
 template <typename predicate_type>
 inline bool array<storage_type, allocator_type>::all(predicate_type predicate) const {
-    for (uint32 i = 0; i < _size; ++i) {
+    for (uint32_t i = 0; i < _size; ++i) {
         if (!predicate(_data[i])) {
             return false;
         }
@@ -511,7 +518,7 @@ inline bool array<storage_type, allocator_type>::all(predicate_type predicate) c
 template <typename storage_type, typename allocator_type>
 template <typename predicate_type>
 inline bool array<storage_type, allocator_type>::any(predicate_type predicate) const {
-    for (uint32 i = 0; i < _size; ++i) {
+    for (uint32_t i = 0; i < _size; ++i) {
         if (predicate(_data[i])) {
             return true;
         }
@@ -522,7 +529,7 @@ inline bool array<storage_type, allocator_type>::any(predicate_type predicate) c
 template <typename storage_type, typename allocator_type>
 template <typename predicate_type>
 inline void array<storage_type, allocator_type>::for_each(predicate_type predicate) const {
-    for (uint32 i = 0; i < _size; ++i) {
+    for (uint32_t i = 0; i < _size; ++i) {
         predicate(_data[i]);
     }
 }
@@ -534,7 +541,7 @@ array<storage_type, allocator_type>::map(predicate_type predicate) const {
     using map_return_type = decltype(predicate_type());
     array<map_return_type, map_array_allocator_type> mapped_array;
     mapped_array.ensure_capacity(_size);
-    for (uint32 i = 0; i < _size; ++i) {
+    for (uint32_t i = 0; i < _size; ++i) {
         mapped_array.insert(i, predicate(_data[i]));
     }
     return mapped_array;
@@ -545,7 +552,7 @@ template <typename predicate_type, typename filtered_array_allocator_type>
 inline array<storage_type, filtered_array_allocator_type>
 array<storage_type, allocator_type>::filter(predicate_type predicate) const {
     array<storage_type, filtered_array_allocator_type> return_array;
-    for (uint32 i = 0; i < _size; ++i) {
+    for (uint32_t i = 0; i < _size; ++i) {
         if (predicate(_data[i])) {
             return_array.add(_data[i]);
         }
@@ -557,7 +564,7 @@ template <typename storage_type, typename allocator_type>
 template <typename predicate_type>
 inline array<int> array<storage_type, allocator_type>::find_all(predicate_type predicate) const {
     array<int> return_arr;
-    for (uint32 i = 0; i < _size; ++i) {
+    for (uint32_t i = 0; i < _size; ++i) {
         if (predicate(_data[i])) {
             return_arr.add(i);
         }
@@ -568,7 +575,7 @@ inline array<int> array<storage_type, allocator_type>::find_all(predicate_type p
 template <typename storage_type, typename allocator_type>
 inline array<int> array<storage_type, allocator_type>::find_all(const storage_type& value) const {
     array<int> return_arr;
-    for (uint32 i = 0; i < _size; ++i) {
+    for (uint32_t i = 0; i < _size; ++i) {
         if (_data[i] == value) {
             return_arr.add(i);
         }
@@ -580,9 +587,9 @@ template <typename storage_type, typename allocator_type>
 template <typename predicate_type>
 inline typename array<storage_type, allocator_type>::indexed_result
 array<storage_type, allocator_type>::find(predicate_type predicate) const {
-    for (uint32 i = 0; i < _size; ++i) {
+    for (uint32_t i = 0; i < _size; ++i) {
         if (predicate(_data[i])) {
-            return indexed_result::from_value(static_cast<int32>(i));
+            return indexed_result::from_value(static_cast<int32_t>(i));
         }
     }
     return indexed_result::from_error(-1).attach_value_without_state_change(-1);
@@ -591,9 +598,9 @@ array<storage_type, allocator_type>::find(predicate_type predicate) const {
 template <typename storage_type, typename allocator_type>
 inline typename array<storage_type, allocator_type>::indexed_result
 array<storage_type, allocator_type>::find(const storage_type& value) const {
-    for (uint32 i = 0; i < _size; ++i) {
+    for (uint32_t i = 0; i < _size; ++i) {
         if (_data[i] == value) {
-            return indexed_result::from_value(static_cast<int32>(i));
+            return indexed_result::from_value(static_cast<int32_t>(i));
         }
     }
     return indexed_result::from_error(-1).attach_value_without_state_change(-1);
@@ -618,7 +625,7 @@ inline array<storage_type, allocator_type>::array(const array& other) : _data(nu
 }
 
 template <typename storage_type, typename allocator_type>
-inline array<storage_type, allocator_type>::array(std::remove_reference_t<storage_type>* elems, uint32 size) {
+inline array<storage_type, allocator_type>::array(std::remove_reference_t<storage_type>* elems, uint32_t size) {
     append(elems, size);
 }
 

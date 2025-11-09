@@ -10,19 +10,19 @@ namespace edvar::math::simd {
 
 // simd_128ui implementation
 simd_128ui::simd_128ui() : data(_mm_setzero_si128()) {}
-simd_128ui::simd_128ui(const uint32 all) {
-    alignas(16) uint32 arr[4] = {all, all, all, all};
+simd_128ui::simd_128ui(const uint32_t all) {
+    alignas(16) uint32_t arr[4] = {all, all, all, all};
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(arr));
 }
-simd_128ui::simd_128ui(const uint32 x, const uint32 y, const uint32 z, const uint32 w) {
-    alignas(16) uint32 arr[4] = {x, y, z, w};
+simd_128ui::simd_128ui(const uint32_t x, const uint32_t y, const uint32_t z, const uint32_t w) {
+    alignas(16) uint32_t arr[4] = {x, y, z, w};
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(arr));
 }
-simd_128ui::simd_128ui(const uint32* to_place_data) {
+simd_128ui::simd_128ui(const uint32_t* to_place_data) {
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(to_place_data));
 }
-simd_128ui::simd_128ui(const std::initializer_list<uint32>& list) {
-    alignas(16) uint32 arr[4] = {0, 0, 0, 0};
+simd_128ui::simd_128ui(const std::initializer_list<uint32_t>& list) {
+    alignas(16) uint32_t arr[4] = {0, 0, 0, 0};
     int i = 0;
     for (auto it = list.begin(); it != list.end() && i < 4; ++it, ++i)
         arr[i] = *it;
@@ -43,20 +43,20 @@ simd_128ui& simd_128ui::operator=(simd_128ui&& rhs) noexcept {
     memory::zero_bytes(rhs.v, sizeof(rhs.v));
     return *this;
 }
-simd_128ui& simd_128ui::operator=(const uint32* to_place_data) {
+simd_128ui& simd_128ui::operator=(const uint32_t* to_place_data) {
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(to_place_data));
     return *this;
 }
-simd_128ui& simd_128ui::operator=(const std::initializer_list<uint32>& list) {
-    alignas(16) uint32 arr[4] = {0, 0, 0, 0};
+simd_128ui& simd_128ui::operator=(const std::initializer_list<uint32_t>& list) {
+    alignas(16) uint32_t arr[4] = {0, 0, 0, 0};
     int i = 0;
     for (auto it = list.begin(); it != list.end() && i < 4; ++it, ++i)
         arr[i] = *it;
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(arr));
     return *this;
 }
-simd_128ui& simd_128ui::operator=(const uint32 all) {
-    uint32 arr[4] = {all, all, all, all};
+simd_128ui& simd_128ui::operator=(const uint32_t all) {
+    uint32_t arr[4] = {all, all, all, all};
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(arr));
     return *this;
 }
@@ -148,7 +148,7 @@ bool simd_128ui::operator==(const simd_128ui& rhs) const {
     __m128i cmp = _mm_cmpeq_epi32(this->data, rhs.data);
     union helper {
         __m128i m;
-        int32 v[4];
+       int32_t v[4];
     };
     helper h;
     h.m = cmp;
@@ -235,19 +235,19 @@ simd_128ui& simd_128ui::horizontal_sub_inline(const simd_128ui& rhs) {
 
 // simd_128ul implementation
 simd_128ul::simd_128ul() : data(_mm_setzero_si128()) {}
-simd_128ul::simd_128ul(const uint64 all) {
-    alignas(16) uint64 arr[2] = {all, all};
+simd_128ul::simd_128ul(const uint64_t all) {
+    alignas(16) uint64_t arr[2] = {all, all};
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(arr));
 }
-simd_128ul::simd_128ul(const uint64 x, const uint64 y) {
-    alignas(16) uint64 arr[2] = {x, y};
+simd_128ul::simd_128ul(const uint64_t x, const uint64_t y) {
+    alignas(16) uint64_t arr[2] = {x, y};
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(arr));
 }
-simd_128ul::simd_128ul(const uint64* to_place_data) {
+simd_128ul::simd_128ul(const uint64_t* to_place_data) {
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(to_place_data));
 }
-simd_128ul::simd_128ul(const std::initializer_list<uint64>& list) {
-    alignas(16) uint64 arr[2] = {0, 0};
+simd_128ul::simd_128ul(const std::initializer_list<uint64_t>& list) {
+    alignas(16) uint64_t arr[2] = {0, 0};
     int i = 0;
     for (auto it = list.begin(); it != list.end() && i < 2; ++it, ++i)
         arr[i] = *it;
@@ -268,20 +268,20 @@ simd_128ul& simd_128ul::operator=(simd_128ul&& rhs) noexcept {
     memory::zero_bytes(rhs.v, sizeof(rhs.v));
     return *this;
 }
-simd_128ul& simd_128ul::operator=(const uint64* to_place_data) {
+simd_128ul& simd_128ul::operator=(const uint64_t* to_place_data) {
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(to_place_data));
     return *this;
 }
-simd_128ul& simd_128ul::operator=(const std::initializer_list<uint64>& list) {
-    alignas(16) uint64 arr[2] = {0, 0};
+simd_128ul& simd_128ul::operator=(const std::initializer_list<uint64_t>& list) {
+    alignas(16) uint64_t arr[2] = {0, 0};
     int i = 0;
     for (auto it = list.begin(); it != list.end() && i < 2; ++it, ++i)
         arr[i] = *it;
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(arr));
     return *this;
 }
-simd_128ul& simd_128ul::operator=(const uint64 all) {
-    alignas(16) uint64 arr[2] = {all, all};
+simd_128ul& simd_128ul::operator=(const uint64_t all) {
+    alignas(16) uint64_t arr[2] = {all, all};
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(arr));
     return *this;
 }
@@ -401,12 +401,12 @@ simd_128ul simd_128ul::min(const simd_128ul& lhs, const simd_128ul& rhs) {
 simd_128ul simd_128ul::sqrt() const {
     simd_128ul result;
     for (int i = 0; i < 2; ++i)
-        result.v[i] = static_cast<uint64>(std::sqrt(static_cast<double>(this->v[i])));
+        result.v[i] = static_cast<uint64_t>(std::sqrt(static_cast<double>(this->v[i])));
     return result;
 }
 simd_128ul& simd_128ul::sqrt_inline() {
     for (int i = 0; i < 2; ++i)
-        this->v[i] = static_cast<uint64>(std::sqrt(static_cast<double>(this->v[i])));
+        this->v[i] = static_cast<uint64_t>(std::sqrt(static_cast<double>(this->v[i])));
     return *this;
 }
 
@@ -446,19 +446,19 @@ simd_128ul& simd_128ul::horizontal_sub_inline(const simd_128ul& rhs) {
 
 // simd_128l implementation
 simd_128l::simd_128l() : data(_mm_setzero_si128()) {}
-simd_128l::simd_128l(const int64 all) {
-    int64 arr[2] = {all, all};
+simd_128l::simd_128l(constint64_t all) {
+   int64_t arr[2] = {all, all};
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(arr));
 }
-simd_128l::simd_128l(const int64 x, const int64 y) {
-    int64 arr[2] = {x, y};
+simd_128l::simd_128l(constint64_t x, constint64_t y) {
+   int64_t arr[2] = {x, y};
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(arr));
 }
-simd_128l::simd_128l(const int64* to_place_data) {
+simd_128l::simd_128l(constint64_t* to_place_data) {
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(to_place_data));
 }
-simd_128l::simd_128l(const std::initializer_list<int64>& list) {
-    int64 arr[2] = {0, 0};
+simd_128l::simd_128l(const std::initializer_listint64_t>& list) {
+   int64_t arr[2] = {0, 0};
     int i = 0;
     for (auto it = list.begin(); it != list.end() && i < 2; ++it, ++i)
         arr[i] = *it;
@@ -479,20 +479,20 @@ simd_128l& simd_128l::operator=(simd_128l&& rhs) noexcept {
     memory::zero_bytes(rhs.v, sizeof(rhs.v));
     return *this;
 }
-simd_128l& simd_128l::operator=(const int64* to_place_data) {
+simd_128l& simd_128l::operator=(constint64_t* to_place_data) {
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(to_place_data));
     return *this;
 }
-simd_128l& simd_128l::operator=(const std::initializer_list<int64>& list) {
-    int64 arr[2] = {0, 0};
+simd_128l& simd_128l::operator=(const std::initializer_listint64_t>& list) {
+   int64_t arr[2] = {0, 0};
     int i = 0;
     for (auto it = list.begin(); it != list.end() && i < 2; ++it, ++i)
         arr[i] = *it;
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(arr));
     return *this;
 }
-simd_128l& simd_128l::operator=(const int64 all) {
-    int64 arr[2] = {all, all};
+simd_128l& simd_128l::operator=(constint64_t all) {
+   int64_t arr[2] = {all, all};
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(arr));
     return *this;
 }
@@ -613,7 +613,7 @@ simd_128l simd_128l::min(const simd_128l& lhs, const simd_128l& rhs) {
 simd_128l simd_128l::sqrt() const {
     simd_128l result;
     for (int i = 0; i < 2; ++i)
-        result.v[i] = static_cast<int64>(std::sqrt(static_cast<double>(this->v[i])));
+        result.v[i] = static_castint64_t>(std::sqrt(static_cast<double>(this->v[i])));
     return result;
 }
 simd_128l& simd_128l::sqrt_inline() {
@@ -637,11 +637,11 @@ simd_128l& simd_128l::shuffle_inline(const simd_128l& other, const simd_128l::sh
 
 // simd_128i implementation
 simd_128i::simd_128i() : data(_mm_setzero_si128()) {}
-simd_128i::simd_128i(const int32 all) : data(_mm_set1_epi32(all)) {}
-simd_128i::simd_128i(const int32 x, const int32 y, const int32 z, const int32 w) : data(_mm_set_epi32(w, z, y, x)) {}
-simd_128i::simd_128i(const int32* to_place_data)
+simd_128i::simd_128i(constint32_t all) : data(_mm_set1_epi32(all)) {}
+simd_128i::simd_128i(constint32_t x, constint32_t y, constint32_t z, constint32_t w) : data(_mm_set_epi32(w, z, y, x)) {}
+simd_128i::simd_128i(constint32_t* to_place_data)
     : data(_mm_loadu_si128(reinterpret_cast<const __m128i*>(to_place_data))) {}
-simd_128i::simd_128i(const std::initializer_list<int32>& list) {
+simd_128i::simd_128i(const std::initializer_listint32_t>& list) {
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(list.begin()));
 }
 
@@ -659,15 +659,15 @@ simd_128i& simd_128i::operator=(simd_128i&& rhs) noexcept {
     memory::zero_bytes(rhs.v, sizeof(rhs.v));
     return *this;
 }
-simd_128i& simd_128i::operator=(const int32* to_place_data) {
+simd_128i& simd_128i::operator=(constint32_t* to_place_data) {
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(to_place_data));
     return *this;
 }
-simd_128i& simd_128i::operator=(const std::initializer_list<int32>& list) {
+simd_128i& simd_128i::operator=(const std::initializer_listint32_t>& list) {
     this->data = _mm_loadu_si128(reinterpret_cast<const __m128i*>(list.begin()));
     return *this;
 }
-simd_128i& simd_128i::operator=(const int32 all) {
+simd_128i& simd_128i::operator=(constint32_t all) {
     this->data = _mm_set1_epi32(all);
     return *this;
 }
@@ -772,7 +772,7 @@ bool simd_128i::operator==(const simd_128i& rhs) const {
     __m128i cmp = _mm_cmpeq_epi32(data, rhs.data);
     union helper {
         __m128i m128i;
-        int32 v[4];
+       int32_t v[4];
     } h;
     h.m128i = cmp;
     return h.v[0] == -1 && h.v[1] == -1 && h.v[2] == -1 && h.v[3] == -1;
@@ -780,13 +780,13 @@ bool simd_128i::operator==(const simd_128i& rhs) const {
 
 bool simd_128i::operator!=(const simd_128i& rhs) const { return !(*this == rhs); }
 
-simd_128i simd_128i::operator<<(const int32 shift) const {
+simd_128i simd_128i::operator<<(constint32_t shift) const {
     simd_128i result = *this;
     result <<= shift;
     return result;
 }
 
-simd_128i& simd_128i::operator<<=(const int32 shift) {
+simd_128i& simd_128i::operator<<=(constint32_t shift) {
     data = _mm_slli_epi32(data, shift);
     return *this;
 }
@@ -800,12 +800,12 @@ simd_128i& simd_128i::operator<<=(const simd_128i& shift) {
     return *this;
 }
 
-simd_128i simd_128i::operator>>(const int32 shift) const {
+simd_128i simd_128i::operator>>(constint32_t shift) const {
     simd_128i result = *this;
     result >>= shift;
     return result;
 }
-simd_128i& simd_128i::operator>>=(const int32 shift) {
+simd_128i& simd_128i::operator>>=(constint32_t shift) {
     data = _mm_srli_epi32(data, shift);
     return *this;
 }
@@ -851,10 +851,10 @@ simd_128i simd_128i::sqrt() const {
     return result;
 }
 simd_128i& simd_128i::sqrt_inline() {
-    x = static_cast<int32>(math::square_root(x));
-    y = static_cast<int32>(math::square_root(y));
-    z = static_cast<int32>(math::square_root(z));
-    w = static_cast<int32>(math::square_root(w));
+    x = static_castint32_t>(math::square_root(x));
+    y = static_castint32_t>(math::square_root(y));
+    z = static_castint32_t>(math::square_root(z));
+    w = static_castint32_t>(math::square_root(w));
     return *this;
 }
 
@@ -1258,12 +1258,12 @@ simd_256d& simd_256d::operator=(const simd_256d& rhs) {
 }
 simd_256d& simd_256d::operator=(simd_256d&& rhs) noexcept {
 #if EDVAR_CPP_CORE_USE_AVX2
-    this->data = edvar::move(rhs.data);
+    this->data = std::move(rhs.data);
 #else
-    x = edvar::move(rhs.x);
-    y = edvar::move(rhs.y);
-    z = edvar::move(rhs.z);
-    w = edvar::move(rhs.w);
+    x = std::move(rhs.x);
+    y = std::move(rhs.y);
+    z = std::move(rhs.z);
+    w = std::move(rhs.w);
 #endif
     return *this;
 }

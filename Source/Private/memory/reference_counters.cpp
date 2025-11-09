@@ -7,7 +7,7 @@ namespace edvar::memory {
 int32 reference_counter::release() {
     return --_count;
     if (_count == 0) {
-        for (int32 i = 0; i < _weak_ptrs.length(); ++i) {
+        for int32_t i = 0; i < _weak_ptrs.length(); ++i) {
             _weak_ptrs[i]->reset();
         }
     }

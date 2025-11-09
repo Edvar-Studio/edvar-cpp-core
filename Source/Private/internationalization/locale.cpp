@@ -33,7 +33,7 @@ const locale& locale::invariant() {
 }
 const locale& locale::current() {
     const icu::Locale& current_locale = icu::Locale::getDefault();
-    for (uint32 i = 0; i < static_cast<uint32>(locale::_locale_registry.length()); i++) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(locale::_locale_registry.length()); i++) {
         if (static_cast<const icu::Locale*>(locale::_locale_registry[i]->_icu_locale_data) == &current_locale) {
             return *locale::_locale_registry[i];
         }
@@ -47,7 +47,7 @@ const locale* locale::get(const char* language, const char* country, const char*
                           const char* keywords_and_values) {
     if (!language)
         return nullptr;
-    for (uint32 i = 0; i < static_cast<uint32>(locale::_locale_registry.length()); i++) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(locale::_locale_registry.length()); i++) {
         const locale* loc = locale::_locale_registry[i];
         if (strcmp(loc->language(), language) != 0) {
             continue;
@@ -73,7 +73,7 @@ const char* locale::language_iso3() const {
     return static_cast<const icu::Locale*>(_icu_locale_data)->getISO3Language();
 }
 const char* locale::country_iso3() const { return static_cast<const icu::Locale*>(_icu_locale_data)->getISO3Country(); }
-uint32 locale::lcid() const { return static_cast<const icu::Locale*>(_icu_locale_data)->getLCID(); }
+uint32_t locale::lcid() const { return static_cast<const icu::Locale*>(_icu_locale_data)->getLCID(); }
 bool locale::is_right_to_left() const { return static_cast<const icu::Locale*>(_icu_locale_data)->isRightToLeft(); }
 bool locale::is_valid() const {
     return _icu_locale_data != nullptr && !static_cast<const icu::Locale*>(_icu_locale_data)->isBogus();
@@ -179,7 +179,7 @@ void locale::register_from_icu_locale(const void* icu_locale) {
     const icu::Locale* loc = static_cast<const icu::Locale*>(icu_locale);
     locale* new_locale = new locale();
     new_locale->_icu_locale_data = loc;
-    _locale_registry.add(edvar::move(new_locale));
+    _locale_registry.add(std::move(new_locale));
     if (loc == &icu::Locale::getRoot()) {
         _root_locale = new_locale;
     }

@@ -18,6 +18,9 @@ template <typename in_type> struct optional {
     bool has_value() const { return _has_value; }
 
 
+    in_type* operator->() { return &_value; }
+    const in_type* operator->() const { return &_value; }
+
 private:
     bool _has_value;
     in_type _value;

@@ -5,9 +5,9 @@ namespace edvar::container {
 template <typename storage_type> class array_view {
 public:
     array_view() : _data(nullptr), _length(0) {}
-    array_view(storage_type* data, uint32 length) : _data(data), _length(length) {}
+    array_view(storage_type* data, uint32_t length) : _data(data), _length(length) {}
     array_view(const array_view& other) : _data(other._data), _length(other._length) {}
-    uint32 length() const { return _length; }
+    uint32_t length() const { return _length; }
     const storage_type* data() const { return _data; }
 
     using iterator = edvar::container::iterator::array_view_iterator<storage_type, false>;
@@ -20,11 +20,11 @@ public:
     const_iterator cbegin() const { return const_iterator(_data, _length); }
     const_iterator cend() const { return const_iterator(_data, _length).seek(_length); }
 
-    const storage_type& operator[](uint32 index) const { return _data[index]; }
-    storage_type& operator[](uint32 index) { return _data[index]; }
+    const storage_type& operator[](uint32_t index) const { return _data[index]; }
+    storage_type& operator[](uint32_t index) { return _data[index]; }
 
 private:
     storage_type* _data;
-    uint32 _length;
+    uint32_t _length;
 };
 } // namespace edvar::container

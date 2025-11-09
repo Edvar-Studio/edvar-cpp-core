@@ -16,7 +16,7 @@ template <typename type> struct vector2 {
     }
     ~vector2() = default;
     vector2(const vector2& other) : x(other.x), y(other.y) {}
-    vector2(vector2&& other) noexcept : x(edvar::move(other.x)), y(edvar::move(other.y)) {}
+    vector2(vector2&& other) noexcept : x(std::move(other.x)), y(std::move(other.y)) {}
     vector2& operator=(const vector2& rhs) {
         if (this != &rhs) {
             x = rhs.x;
@@ -26,8 +26,8 @@ template <typename type> struct vector2 {
     }
     vector2& operator=(vector2&& rhs) noexcept {
         if (this != &rhs) {
-            x = edvar::move(rhs.x);
-            y = edvar::move(rhs.y);
+            x = std::move(rhs.x);
+            y = std::move(rhs.y);
         }
         return *this;
     }
@@ -192,7 +192,7 @@ template <typename type> struct vector2 {
     bool operator==(const vector2& rhs) const { return x == rhs.x && y == rhs.y; }
     bool operator!=(const vector2& rhs) const { return !(*this == rhs); }
 
-    inline type& operator[](uint32 index) {
+    inline type& operator[](uint32_t index) {
         if (index == 0)
             return x;
         else if (index == 1)
@@ -202,7 +202,7 @@ template <typename type> struct vector2 {
             return xy[index % 2]; // modulo to avoid compiler warning
         }
     }
-    inline const type& operator[](uint32 index) const {
+    inline const type& operator[](uint32_t index) const {
         if (index == 0)
             return x;
         else if (index == 1)
@@ -265,7 +265,7 @@ template <typename type> struct vector3 {
     }
     ~vector3() = default;
     vector3(const vector3& other) : x(other.x), y(other.y), z(other.z) {}
-    vector3(vector3&& other) noexcept : x(edvar::move(other.x)), y(edvar::move(other.y)), z(edvar::move(other.z)) {}
+    vector3(vector3&& other) noexcept : x(std::move(other.x)), y(std::move(other.y)), z(std::move(other.z)) {}
     vector3& operator=(const vector3& rhs) {
         if (this != &rhs) {
             x = rhs.x;
@@ -276,9 +276,9 @@ template <typename type> struct vector3 {
     }
     vector3& operator=(vector3&& rhs) noexcept {
         if (this != &rhs) {
-            x = edvar::move(rhs.x);
-            y = edvar::move(rhs.y);
-            z = edvar::move(rhs.z);
+            x = std::move(rhs.x);
+            y = std::move(rhs.y);
+            z = std::move(rhs.z);
         }
         return *this;
     }
@@ -439,7 +439,7 @@ template <typename type> struct vector3 {
     vector3 operator-() const { return negate(); }
     bool operator==(const vector3& rhs) const { return x == rhs.x && y == rhs.y && z == rhs.z; }
     bool operator!=(const vector3& rhs) const { return !(*this == rhs); }
-    inline type& operator[](uint32 index) {
+    inline type& operator[](uint32_t index) {
         if (index == 0)
             return x;
         else if (index == 1)
@@ -451,7 +451,7 @@ template <typename type> struct vector3 {
             return xyz[index % 3]; // modulo to avoid compiler warning
         }
     }
-    inline const type& operator[](uint32 index) const {
+    inline const type& operator[](uint32_t index) const {
         if (index == 0)
             return x;
         else if (index == 1)
@@ -508,7 +508,9 @@ template <typename type> struct vector3 {
 
 using vector2f = vector2<float>;
 using vector2d = vector2<double>;
+using vector2i = vector2<int32_t>;
 using vector3f = vector3<float>;
 using vector3d = vector3<double>;
+using vector3i = vector3<int32_t>;
 
 } // namespace edvar::math

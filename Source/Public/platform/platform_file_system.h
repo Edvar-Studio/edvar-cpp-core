@@ -2,14 +2,13 @@
 
 #include "containers/array.h"
 #include "platform/platform_windowing_system.h"
-#include "platform_base.h"
 namespace edvar {
 struct time;
 }
 
 namespace edvar::platform_types {
 
-enum class file_access_mode : platform_base::uint32 {
+enum class file_access_mode : uint32_t {
     // read mode
     read = 1 << 0,
     // write access mode
@@ -20,14 +19,14 @@ enum class file_access_mode : platform_base::uint32 {
     truncate = 1 << 3,
 };
 
-enum class file_share_mode : platform_base::uint32 {
+enum class file_share_mode : uint32_t {
     allow_none = 0,
     allow_read = 1 << 0,
     allow_write = 1 << 1,
     allow_delete = 1 << 2,
 };
 
-enum class file_operation_error : platform_base::uint32 {
+enum class file_operation_error : uint32_t {
     /**
      * If the path was invalid (e.g., contains illegal characters)
      */
@@ -68,21 +67,21 @@ enum class file_operation_error : platform_base::uint32 {
     unknown_error = 0xFFFFFFFF
 };
 
-file_access_mode operator|(const file_access_mode& a, const file_access_mode& b) {
-    return static_cast<file_access_mode>(static_cast<platform_base::uint32>(a) | static_cast<platform_base::uint32>(b));
+inline file_access_mode operator|(const file_access_mode& a, const file_access_mode& b) {
+    return static_cast<file_access_mode>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
 }
-file_access_mode operator&(const file_access_mode& a, const file_access_mode& b) {
-    return static_cast<file_access_mode>(static_cast<platform_base::uint32>(a) & static_cast<platform_base::uint32>(b));
-}
-
-file_share_mode operator|(const file_share_mode& a, const file_share_mode& b) {
-    return static_cast<file_share_mode>(static_cast<platform_base::uint32>(a) | static_cast<platform_base::uint32>(b));
-}
-file_share_mode operator&(const file_share_mode& a, const file_share_mode& b) {
-    return static_cast<file_share_mode>(static_cast<platform_base::uint32>(a) & static_cast<platform_base::uint32>(b));
+inline file_access_mode operator&(const file_access_mode& a, const file_access_mode& b) {
+    return static_cast<file_access_mode>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
 }
 
-typedef edvar::value_or_error<platform_base::uint32, file_operation_error> file_buffer_result;
+inline file_share_mode operator|(const file_share_mode& a, const file_share_mode& b) {
+    return static_cast<file_share_mode>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+}
+inline file_share_mode operator&(const file_share_mode& a, const file_share_mode& b) {
+    return static_cast<file_share_mode>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+}
+
+typedef edvar::value_or_error<uint32_t, file_operation_error> file_buffer_result;
 typedef edvar::value_or_error<edvar::time, file_operation_error> file_time_result;
 
 struct platform_file_system {
@@ -99,15 +98,13 @@ public:
      * @brief Open a file at the specified path.
      */
     virtual edvar::value_or_error<native_file_handle, file_operation_error>
-    open_file(const edvar::string_base<platform_base::char_utf16>& path, file_access_mode open_mode,
-              file_share_mode share_mode) = 0;
+    open_file(const edvar::string_base<char_utf16>& path, file_access_mode open_mode, file_share_mode share_mode) = 0;
 
     // Read up to `size` bytes into `buffer`. Returns number of bytes read or error.
-    virtual file_buffer_result read_file(native_file_handle handle, void* buffer, platform_base::uint32 size) = 0;
+    virtual file_buffer_result read_file(native_file_handle handle, void* buffer, uint32_t size) = 0;
 
     // Write `size` bytes from `buffer`. Returns number of bytes written or error.
-    virtual file_buffer_result write_file(native_file_handle handle, const void* buffer,
-                                          platform_base::uint32 size) = 0;
+    virtual file_buffer_result write_file(native_file_handle handle, const void* buffer, uint32_t size) = 0;
     // Flush the file buffers to disk.
     virtual file_buffer_result flush_file(native_file_handle handle) = 0;
 
@@ -115,21 +112,17 @@ public:
     virtual file_buffer_result close_file(native_file_handle handle) = 0;
 
     // Check if a file exists at path. (Checks only for files, directories will return false)
-    virtual bool file_exists(const edvar::string_base<platform_base::char_utf16>& path) = 0;
+    virtual bool file_exists(const edvar::string_base<char_utf16>& path) = 0;
     // Create an empty file at path.
-    virtual edvar::error_result<file_operation_error>
-    create_file(const edvar::string_base<platform_base::char_utf16>& path) = 0;
+    virtual edvar::error_result<file_operation_error> create_file(const edvar::string_base<char_utf16>& path) = 0;
 
-    virtual edvar::error_result<file_operation_error>
-    delete_file(const edvar::string_base<platform_base::char_utf16>& path) = 0;
+    virtual edvar::error_result<file_operation_error> delete_file(const edvar::string_base<char_utf16>& path) = 0;
 
-    virtual edvar::error_result<file_operation_error>
-    move_file(const edvar::string_base<platform_base::char_utf16>& from,
-              const edvar::string_base<platform_base::char_utf16>& to) = 0;
+    virtual edvar::error_result<file_operation_error> move_file(const edvar::string_base<char_utf16>& from,
+                                                                const edvar::string_base<char_utf16>& to) = 0;
     // Copy a file from one path to another. Will replace existing file at destination.
-    virtual edvar::error_result<file_operation_error>
-    copy_file(const edvar::string_base<platform_base::char_utf16>& from,
-              const edvar::string_base<platform_base::char_utf16>& to) = 0;
+    virtual edvar::error_result<file_operation_error> copy_file(const edvar::string_base<char_utf16>& from,
+                                                                const edvar::string_base<char_utf16>& to) = 0;
 
     virtual file_time_result get_file_modification_time(const native_file_handle& handle) = 0;
     virtual file_time_result get_file_creation_time(const native_file_handle& handle) = 0;
@@ -140,28 +133,26 @@ public:
     virtual file_time_result set_file_access_time(const native_file_handle& handle, const edvar::time& time) = 0;
 
     // Check if the directory exists at path. If the path points to a file, returns false.
-    virtual bool directory_exists(const edvar::string_base<platform_base::char_utf16>& path) = 0;
+    virtual bool directory_exists(const edvar::string_base<char_utf16>& path) = 0;
 
     // Create a directory at the specified path. If parent directories do not exist, they won't be created.
     // (non-recursive)
-    virtual edvar::error_result<file_operation_error>
-    create_directory(const edvar::string_base<platform_base::char_utf16>& path) = 0;
+    virtual edvar::error_result<file_operation_error> create_directory(const edvar::string_base<char_utf16>& path) = 0;
 
     // Delete a directory at the specified path. Directory must be empty.
-    virtual edvar::error_result<file_operation_error>
-    delete_directory(const edvar::string_base<platform_base::char_utf16>& path) = 0;
+    virtual edvar::error_result<file_operation_error> delete_directory(const edvar::string_base<char_utf16>& path) = 0;
     struct directory_content_entry {
-        edvar::string_base<platform_base::char_utf16> name;
+        edvar::string_base<char_utf16> name;
         bool is_directory;
     };
     virtual edvar::value_or_error<edvar::array<directory_content_entry>, file_operation_error>
-    list_directory_contents(const edvar::string_base<platform_base::char_utf16>& path) = 0;
+    list_directory_contents(const edvar::string_base<char_utf16>& path) = 0;
 
-    virtual edvar::string_base<platform_base::char_utf16> get_current_working_directory() = 0;
-    virtual edvar::string_base<platform_base::char_utf16>
-    set_current_working_directory(const edvar::string_base<platform_base::char_utf16>& path) = 0;
+    virtual edvar::string_base<char_utf16> get_current_working_directory() = 0;
+    virtual edvar::string_base<char_utf16>
+    set_current_working_directory(const edvar::string_base<char_utf16>& path) = 0;
 
-    virtual edvar::string_base<platform_base::char_utf16> get_temp_directory() = 0;
+    virtual edvar::string_base<char_utf16> get_temp_directory() = 0;
 
     /**
      * @brief Get a special directory by name. E.g., "Documents", "Downloads", "Desktop", etc.
@@ -183,31 +174,45 @@ public:
      * @param name Name of the special directory.
      * @return Path to the special directory.
      */
-    virtual edvar::string_base<platform_base::char_utf16>
-    get_special_directory(const edvar::string_base<platform_base::char_utf16>& name) = 0;
+    virtual edvar::string_base<char_utf16> get_special_directory(const edvar::string_base<char_utf16>& name) = 0;
     struct file_dialog_filter {
-        edvar::string_base<platform_base::char_utf16> name;
-        edvar::string_base<platform_base::char_utf16> pattern; // e.g., "*.txt;*.md"
+        edvar::string_base<char_utf16> name;
+        edvar::string_base<char_utf16> pattern; // e.g., "*.txt;*.md"
     };
-    virtual edvar::container::array<edvar::string_base<platform_base::char_utf16>>
-    native_open_dialog(const edvar::string_base<platform_base::char_utf16>& title,
+    /**
+     * @brief Create an open file/directory dialog using native api.
+     * @param title Title of the dialog window.
+     * @param filters List of file filters to apply. Format: name and pattern (e.g., "Text Files", "*.txt;*.md").
+     * @param allow_multiple_selection Whether to allow multiple file selection.
+     * @param pick_folders Whether to allow picking folders instead of files.
+     * @param file_must_exist Whether the selected file(s) must exist.
+     * @param default_path Default path to open the dialog in.
+     * @param default_extension Default file extension to use.
+     * @param parent_window Native handle to the parent window. Can be nullptr.
+     */
+    virtual edvar::container::array<edvar::string_base<char_utf16>>
+    native_open_dialog(const edvar::string_base<char_utf16>& title,
                        const edvar::container::array<file_dialog_filter>& filters,
                        bool allow_multiple_selection = false, bool pick_folders = false, bool file_must_exist = true,
-                       const edvar::string_base<platform_base::char_utf16>& default_path =
-                           edvar::string_base<platform_base::char_utf16>(),
-                       const edvar::string_base<platform_base::char_utf16>& default_extension =
-                           edvar::string_base<platform_base::char_utf16>(),
+                       const edvar::string_base<char_utf16>& default_path = edvar::string_base<char_utf16>(),
+                       const edvar::string_base<char_utf16>& default_extension = edvar::string_base<char_utf16>(),
                        platform_windowing_system::native_window_handle parent_window = nullptr) = 0;
-
-    virtual edvar::container::array<edvar::string_base<platform_base::char_utf16>>
-    native_save_dialog(const edvar::string_base<platform_base::char_utf16>& title,
+    /**
+     * @brief Create a save file dialog using native api.
+     * @param title Title of the dialog window.
+     * @param filters List of file filters to apply. Format: name and pattern (e.g., "Text Files", "*.txt;*.md").
+     * @param prompt_overwrite Whether to prompt the user if the file already exists.
+     * @param default_file_name Default file name to use in the dialog.
+     * @param default_path Default path to open the dialog in.
+     * @param default_extension Default file extension to use.
+     * @param parent_window Native handle to the parent window. Can be nullptr.
+     */
+    virtual edvar::container::array<edvar::string_base<char_utf16>>
+    native_save_dialog(const edvar::string_base<char_utf16>& title,
                        const edvar::container::array<file_dialog_filter>& filters, bool prompt_overwrite = true,
-                       const edvar::string_base<platform_base::char_utf16>& default_file_name =
-                           edvar::string_base<platform_base::char_utf16>(),
-                       const edvar::string_base<platform_base::char_utf16>& default_path =
-                           edvar::string_base<platform_base::char_utf16>(),
-                       const edvar::string_base<platform_base::char_utf16>& default_extension =
-                           edvar::string_base<platform_base::char_utf16>(),
+                       const edvar::string_base<char_utf16>& default_file_name = edvar::string_base<char_utf16>(),
+                       const edvar::string_base<char_utf16>& default_path = edvar::string_base<char_utf16>(),
+                       const edvar::string_base<char_utf16>& default_extension = edvar::string_base<char_utf16>(),
                        platform_windowing_system::native_window_handle parent_window = nullptr) = 0;
 };
 } // namespace edvar::platform_types

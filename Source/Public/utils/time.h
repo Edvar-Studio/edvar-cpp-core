@@ -3,12 +3,12 @@
 namespace edvar {
 struct time {
     time() : _nanoseconds(0) {}
-    explicit time(uint64 nanoseconds) : _nanoseconds(nanoseconds) {}
+    explicit time(uint64_t nanoseconds) : _nanoseconds(nanoseconds) {}
 
-    uint64 to_nanoseconds() const {
+    uint64_t to_nanoseconds() const {
         return _nanoseconds;
     }
 private:
-    uint64 _nanoseconds;
+    uint64_t _nanoseconds;
 };
 } // namespace edvar

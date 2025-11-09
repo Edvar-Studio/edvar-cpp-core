@@ -11,8 +11,8 @@ public:
 
     struct command_definition {
         command_definition(command_definition&& other) noexcept
-            : name(edvar::move(other.name)), description(edvar::move(other.description)), parent(other.parent),
-              sub_commands(edvar::move(other.sub_commands)) {
+            : name(std::move(other.name)), description(std::move(other.description)), parent(other.parent),
+              sub_commands(std::move(other.sub_commands)) {
             other.parent = nullptr;
         }
         edvar::string_utf16 name;

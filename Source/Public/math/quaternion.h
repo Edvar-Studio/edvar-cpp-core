@@ -17,7 +17,7 @@ template <typename type> struct quaternion {
     ~quaternion() = default;
     quaternion(const quaternion& other) : x(other.x), y(other.y), z(other.z), w(other.w) {}
     quaternion(quaternion&& other) noexcept
-        : x(edvar::move(other.x)), y(edvar::move(other.y)), z(edvar::move(other.z)), w(edvar::move(other.w)) {}
+        : x(std::move(other.x)), y(std::move(other.y)), z(std::move(other.z)), w(std::move(other.w)) {}
     quaternion& operator=(const quaternion& rhs) {
         if (this != &rhs) {
             x = rhs.x;
@@ -29,10 +29,10 @@ template <typename type> struct quaternion {
     }
     quaternion& operator=(quaternion&& rhs) noexcept {
         if (this != &rhs) {
-            x = edvar::move(rhs.x);
-            y = edvar::move(rhs.y);
-            z = edvar::move(rhs.z);
-            w = edvar::move(rhs.w);
+            x = std::move(rhs.x);
+            y = std::move(rhs.y);
+            z = std::move(rhs.z);
+            w = std::move(rhs.w);
         }
         return *this;
     }

@@ -1,12 +1,12 @@
 #pragma once
 #include "./array.h" // IWYU pragma: keep
-#include "platform/basic_types.h"
+#include <type_traits>
 
 namespace edvar {
 namespace c_string {
 template <typename character_type, typename = std::enable_if_t<edvar::meta::is_character_v<character_type>>>
-inline uint32 string_length(const character_type* str) {
-    uint32 length = 0;
+inline uint32_t string_length(const character_type* str) {
+    uint32_t length = 0;
     while (str[length] != 0) {
         length++;
     }
@@ -39,12 +39,19 @@ bool is_whitespace(char_utf8 ch);
 bool is_whitespace(char_utf16 ch);
 bool is_whitespace(char_utf32 ch);
 
+// Parsing wrappers (implemented in Source/Private/containers/string.cpp).
+// Return value_or_error_code<T> so callers can detect parse failures.
+value_or_error_code<int64_t> parse_signed(const char_utf16* string, int base = 10,
+                                          const edvar::internationalization::locale* locale = nullptr);
+value_or_error_code<double> parse_double(const char_utf16* string,
+                                         const edvar::internationalization::locale* locale = nullptr);
+
 template <typename character_type = char_utf16, bool is_const = false> class iterator {
 public:
     using data_type = std::conditional_t<is_const, const character_type*, character_type*>;
     using data_ref_type = std::conditional_t<is_const, const character_type&, character_type&>;
 
-    iterator(character_type* start, uint32 length) : _data(start), _length(length), _current_index(0) {}
+    iterator(character_type* start, uint32_t length) : _data(start), _length(length), _current_index(0) {}
     iterator(character_type* start) : _data(start), _length(edvar::c_string::string_length(start)), _current_index(0) {}
     iterator(const iterator& other)
         : _data(other._data), _length(other._length), _current_index(other._current_index) {}
@@ -65,7 +72,7 @@ public:
         _current_index = 0;
         return *this;
     }
-    iterator& seek(uint32 index) {
+    iterator& seek(uint32_t index) {
         if (index < _length) {
             _current_index = index;
         } else {
@@ -131,23 +138,30 @@ public:
 
 private:
     data_type _data;
-    uint32 _length;
-    uint32 _current_index;
+    uint32_t _length;
+    uint32_t _current_index;
 };
 // swap for iterator
 } // namespace c_string
 
 template <typename character_type> class string_base; // forward declare string_base
 
+// helper to fill arg_strings/options_strings using an index sequence (avoids runtime index mutation)
+template <typename StringBaseT, typename Tuple, size_t... Is>
+static void __run_to_string_helpers(const Tuple& tup, edvar::array<StringBaseT>& options_strings,
+                                    edvar::array<StringBaseT>& arg_strings, std::index_sequence<Is...>) {
+    ((arg_strings[Is] = edvar::to_string(std::get<Is>(tup), options_strings[Is])), ...);
+}
+
 template <typename character_type = char_utf16> class string_view {
 public:
     string_view() : _data(nullptr), _length(0) {}
     string_view(const character_type* str) : _data(str), _length(edvar::c_string::string_length(str)) {}
-    string_view(const character_type* str, uint32 length) : _data(str), _length(length) {}
+    string_view(const character_type* str, uint32_t length) : _data(str), _length(length) {}
     inline string_view(const string_base<character_type>& in_string_base);
     const character_type* data() const { return _data; }
     character_type* mutable_data() { return const_cast<character_type*>(_data); }
-    uint32 length() const { return _length; }
+    uint32_t length() const { return _length; }
 
     struct section {
         const string_view* parent_view;
@@ -157,15 +171,15 @@ public:
         const character_type* section_end;
     };
 
-    value_or_error_code<section> find(const character_type* in_str, uint32 start_offset = 0) const {
-        uint32 other_length = edvar::c_string::string_length(in_str);
+    value_or_error_code<section> find(const character_type* in_str, uint32_t start_offset = 0) const {
+        uint32_t other_length = edvar::c_string::string_length(in_str);
         if (other_length > (_length + start_offset)) {
             return value_or_error_code<section>::from_error(1);
         }
-        for (uint32 i = 0; i < _length; ++i) {
+        for (uint32_t i = 0; i < _length; ++i) {
             character_type* current_comp_start = _data + i + start_offset;
             bool matches = true;
-            for (uint32 j = 0; j < other_length; ++j) {
+            for (uint32_t j = 0; j < other_length; ++j) {
                 if (current_comp_start[j] != in_str[j]) {
                     matches = false;
                     break;
@@ -183,10 +197,10 @@ public:
     }
 
     container::array<value_or_error_code<section>> find_all(const character_type* in_str,
-                                                            uint32 start_offset = 0) const {
+                                                            uint32_t start_offset = 0) const {
         container::array<value_or_error_code<section>> return_arr;
         value_or_error_code<section> latest;
-        uint32 latest_offset = start_offset;
+        uint32_t latest_offset = start_offset;
         do {
             latest = find(in_str, latest_offset);
             if (latest.is_error()) {
@@ -199,11 +213,11 @@ public:
     }
 
     bool operator==(const character_type* other_string) const {
-        uint32 other_length = edvar::c_string::string_length(other_string);
+        uint32_t other_length = edvar::c_string::string_length(other_string);
         if (other_length != _length) {
             return false;
         }
-        for (uint32 i = 0; i < _length; ++i) {
+        for (uint32_t i = 0; i < _length; ++i) {
             if (_data[i] != other_string[i]) {
                 return false;
             }
@@ -215,7 +229,7 @@ public:
         if (other._length != _length) {
             return false;
         }
-        for (uint32 i = 0; i < _length; ++i) {
+        for (uint32_t i = 0; i < _length; ++i) {
             if (_data[i] != other._data[i]) {
                 return false;
             }
@@ -226,7 +240,7 @@ public:
     bool operator!=(const character_type* other_string) const { return !(*this == other_string); }
     bool operator!=(const string_view& other) const { return !(*this == other); }
 
-    const character_type& operator[](uint32 index) const { return _data[index]; }
+    const character_type& operator[](uint32_t index) const { return _data[index]; }
 
     using iterator = c_string::iterator<character_type, false>;
     using const_iterator = c_string::iterator<character_type, true>;
@@ -240,7 +254,7 @@ public:
 
 private:
     const character_type* _data;
-    uint32 _length;
+    uint32_t _length;
 };
 
 template <typename character_type> class string_base {
@@ -257,7 +271,7 @@ public:
         if (c_str) {
             char_utf16* as_utf16 = c_string::create_utf16(reinterpret_cast<const char_utf8*>(c_str));
             if (as_utf16) {
-                uint32 length = edvar::c_string::string_length(as_utf16);
+                uint32_t length = edvar::c_string::string_length(as_utf16);
                 _data.ensure_capacity(length + 1);
                 _data.add_uninitialized(length + 1);
                 edvar::memory::copy<character_type>(_data.data(), as_utf16, length);
@@ -275,7 +289,7 @@ public:
         if (utf8_str) {
             char_utf16* as_utf16 = c_string::create_utf16(utf8_str);
             if (as_utf16) {
-                uint32 length = edvar::c_string::string_length(as_utf16);
+                uint32_t length = edvar::c_string::string_length(as_utf16);
                 _data.ensure_capacity(length + 1);
                 _data.add_uninitialized(length + 1);
                 edvar::memory::copy<character_type>(_data.data(), as_utf16, length);
@@ -291,7 +305,7 @@ public:
 
     string_base(const char_utf16* utf16_str) {
         if (utf16_str) {
-            uint32 length = edvar::c_string::string_length(utf16_str);
+            uint32_t length = edvar::c_string::string_length(utf16_str);
             _data.ensure_capacity(length + 1);
             _data.add_uninitialized(length + 1);
             edvar::memory::copy<character_type>(_data.data(), utf16_str, length);
@@ -305,7 +319,7 @@ public:
         if (utf32_str) {
             char_utf16* as_utf16 = c_string::create_utf16(utf32_str);
             if (as_utf16) {
-                uint32 length = edvar::c_string::string_length(as_utf16);
+                uint32_t length = edvar::c_string::string_length(as_utf16);
                 _data.ensure_capacity(length + 1);
                 _data.add_uninitialized(length + 1);
                 edvar::memory::copy<character_type>(_data.data(), as_utf16, length);
@@ -330,7 +344,7 @@ public:
         } else if constexpr (sizeof(wchar_t) == sizeof(char_utf32)) {
             char_utf16* as_utf16 = c_string::create_utf16(reinterpret_cast<const char_utf32*>(in_str));
             if (as_utf16) {
-                uint32 length = edvar::c_string::string_length(as_utf16);
+                uint32_t length = edvar::c_string::string_length(as_utf16);
                 _data.ensure_capacity(length + 1);
                 _data.add_uninitialized(length + 1);
                 edvar::memory::copy<character_type>(_data.data(), as_utf16, length);
@@ -343,7 +357,7 @@ public:
             // this doesn't make any sense, why would someone use this but ok.
             char_utf16* as_utf16 = c_string::create_utf16(reinterpret_cast<const char_utf8*>(in_str));
             if (as_utf16) {
-                uint32 length = edvar::c_string::string_length(as_utf16);
+                uint32_t length = edvar::c_string::string_length(as_utf16);
                 _data.ensure_capacity(length + 1);
                 _data.add_uninitialized(length + 1);
                 edvar::memory::copy<character_type>(_data.data(), as_utf16, length);
@@ -355,7 +369,7 @@ public:
         }
     }
 
-    string_base(const character_type* str, uint32 length) {
+    string_base(const character_type* str, uint32_t length) {
         if (str == nullptr) {
             _data.add(0); // null terminator
             return;
@@ -369,7 +383,7 @@ public:
     string_base(const string_base& other) {
         _data = other._data; // copies by default
     }
-    string_base(string_base&& other) noexcept { _data = edvar::move(other._data); }
+    string_base(string_base&& other) noexcept { _data = std::move(other._data); }
 
     inline string_base<char_utf16> to_utf16() const {
         char_utf16* as_utf16 = c_string::create_utf16(_data.data());
@@ -429,7 +443,7 @@ public:
         if (_data.data() != str) {
             _data.clear();
             if (str) {
-                uint32 length = edvar::c_string::string_length(str);
+                uint32_t length = edvar::c_string::string_length(str);
                 _data.resize(length + 1);
                 _data = str;
                 // add null terminator
@@ -448,7 +462,7 @@ public:
 
     inline string_base& operator=(string_base&& other) noexcept {
         if (this != &other) {
-            _data = edvar::move(other._data);
+            _data = std::move(other._data);
             other._data.empty();
         }
         return *this;
@@ -456,21 +470,21 @@ public:
 
     inline const character_type* data() const { return _data.data(); }
     inline character_type* data() { return _data.data(); }
-    inline uint32 length() const { return _data.length() > 0 ? _data.length() - 1 : 0; }
+    inline uint32_t length() const { return _data.length() > 0 ? _data.length() - 1 : 0; }
     inline bool is_empty() const { return length() == 0; }
     inline void clear() {
         _data.clear();
         _data.add(0); // null terminator
     }
 
-    inline void append(const character_type* str, uint32 length) {
+    inline void append(const character_type* str, uint32_t length) {
         if (str && length > 0) {
             if (_data.length() > 0) {
                 _data.remove_at(_data.length() - 1); // remove null terminator
             }
-            uint32 current_length = _data.length();
+            uint32_t current_length = _data.length();
             _data.resize(current_length + length + 1);
-            for (uint32 i = 0; i < length; ++i) {
+            for (uint32_t i = 0; i < length; ++i) {
                 _data[current_length + i] = str[i];
             }
             _data[current_length + length] = 0; // null terminator
@@ -489,7 +503,7 @@ public:
         if (_data.length() > 0) {
             _data.remove_at(_data.length() - 1); // remove null terminator
         }
-        uint32 current_length = _data.length();
+        uint32_t current_length = _data.length();
         _data.resize(current_length + 2);
         _data[current_length] = ch;
         _data[current_length + 1] = 0; // null terminator
@@ -497,11 +511,11 @@ public:
     inline void append(const string_view<character_type>& view) { append(view.data(), view.length()); }
     inline void append(const typename string_view<character_type>::section& section) { append(section.result_view); }
 
-    template <typename... Args> static string_base format(const char* format, const Args&... args) {
-        return format(reinterpret_cast<const character_type*>(format), args...);
+    template <typename... Args> static string_base format(const char* in_format, const Args&... args) {
+        return format(reinterpret_cast<const character_type*>(in_format), args...);
     }
-    template <typename... Args> static string_base format(const wchar_t* format, const Args&... args) {
-        return format(reinterpret_cast<const character_type*>(format), args...);
+    template <typename... Args> static string_base format(const wchar_t* in_format, const Args&... args) {
+        return format(reinterpret_cast<const character_type*>(in_format), args...);
     }
     template <typename... Args> static string_base format(const character_type* format, const Args&... args) {
         string_view<character_type> format_view(format);
@@ -510,10 +524,12 @@ public:
         // arguments to string
         array<string_base> arg_strings;
         array<string_base> options_strings; // each argument can have its own options
-        constexpr int num_args = sizeof...(Args);
-        arg_strings.add_uninitialized(num_args);
+        constexpr size_t num_args = sizeof...(Args);
+        if (num_args > 0) {
+            arg_strings.add_uninitialized(num_args);
+            options_strings.add_uninitialized(num_args);
+        }
 
-        int arg_index = 0;
         // parse format string
         for (auto iterator = format_view.begin(); iterator.has_next(); ++iterator) {
             character_type ch = *iterator;
@@ -539,11 +555,16 @@ public:
             }
             }
         }
-        ((string_base::to_string_helper(args, arg_strings[arg_index++])), ...);
+        // Convert each argument to its string form using a compile-time index sequence
+        if constexpr (num_args > 0) {
+            auto args_tuple = edvar::forward_as_tuple(args...);
+            __run_to_string_helpers<string_base>(args_tuple, options_strings, arg_strings,
+                                                 std::make_index_sequence<num_args>{});
+        }
         return result;
     }
 
-    void resize(uint32 new_length) {
+    void resize(uint32_t new_length) {
         if (new_length == 0) {
             clear();
             return;
@@ -555,8 +576,71 @@ public:
         _data[new_length] = 0; // null terminator
     }
 
-    character_type& operator[](uint32 index) { return _data[index]; }
-    const character_type& operator[](uint32 index) const { return _data[index]; }
+    int find(const character_type* str, uint32_t start_offset = 0) const {
+        string_view<character_type> view(_data.data(), length());
+        auto result = view.find(str, start_offset);
+        if (result.is_error()) {
+            return -1;
+        }
+        return static_cast<int>(result.get_value().section_start - _data.data());
+    }
+
+    array<string_base> split(const string_base& delimiter) const {
+        array<string_base> result;
+        string_view<character_type> view(_data.data(), length());
+        uint32_t start_index = 0;
+        while (start_index < view.length()) {
+            auto found = view.find(delimiter.data(), start_index);
+            if (found.is_error()) {
+                // add the rest of the string
+                result.add(string_base(view.data() + start_index, view.length() - start_index));
+                break;
+            } else {
+                auto section = found.get_value();
+                uint32_t section_start_index = static_cast<uint32_t>(section.section_start - view.data());
+                result.add(string_base(view.data() + start_index, section_start_index - start_index));
+                start_index = static_cast<uint32_t>(section.section_end - view.data());
+            }
+        }
+        return result;
+    }
+
+    string_base substring(uint32_t start_index, uint32_t length) const {
+        if (start_index >= this->length()) {
+            return string_base();
+        }
+        if (start_index + length > this->length()) {
+            length = this->length() - start_index;
+        }
+        return string_base(_data.data() + start_index, length);
+    }
+
+    template <typename number_type>
+    value_or_error_code<number_type> to_number(uint8_t base = 10,
+                                               const edvar::internationalization::locale* locale = nullptr) const
+        requires(std::is_arithmetic_v<number_type>)
+    {
+        // Convert this string to UTF-8 for parsing.
+        string_base<char_utf16> utf16;
+        if constexpr (!std::is_same_v<character_type, char_utf16>) {
+            utf16 = *this;
+        } else {
+            utf16 = to_utf16();
+        }
+        static_assert(std::is_integral_v<number_type> || std::is_floating_point_v<number_type>,
+                      "number_type must be an integral or floating point type");
+        if constexpr (std::is_integral_v<number_type>) {
+            // skip leading whitespace
+            return static_cast<number_type>(c_string::parse_signed(utf16._data.data(), base, locale));
+        } else if constexpr (std::is_floating_point_v<number_type>) {
+            return static_cast<number_type>(c_string::parse_double(utf16._data.data(), locale));
+        }
+        // shouldn't reach here
+        return value_or_error_code<number_type>::from_error(1);
+    }
+
+    character_type& operator[](uint32_t index) { return _data[index]; }
+    const character_type& operator[](uint32_t index) const { return _data[index]; }
 
     string_view<character_type> to_view() const { return string_view<character_type>(_data.data(), length()); }
     string_view<character_type>::iterator begin() { return to_view().begin(); }
@@ -631,10 +715,9 @@ string_view<character_type>::string_view(const string_base<character_type>& in_s
 // Requirements for iterators
 template <typename character_type>
 inline void swap(edvar::c_string::iterator<character_type>& a, edvar::c_string::iterator<character_type>& b) noexcept {
-    using edvar::swap;
-    swap(a._data, b._data);
-    swap(a._length, b._length);
-    swap(a._current_index, b._current_index);
+    std::swap(a._data, b._data);
+    std::swap(a._length, b._length);
+    std::swap(a._current_index, b._current_index);
 }
 
 #pragma endregion iterator_requirements

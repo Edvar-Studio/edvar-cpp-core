@@ -24,14 +24,19 @@
 #include <concepts>         // IWYU pragma: export
 #include <new>              // IWYU pragma: export
 #include <initializer_list> // IWYU pragma: export
+#include <cinttypes>        // IWYU pragma: export
+#include <utility>          // IWYU pragma: export
 
-#include "platform/basic_types.h" // IWYU pragma: export
+typedef char8_t char_utf8;
+typedef char16_t char_utf16;
+typedef char32_t char_utf32;
+
 namespace edvar {
 namespace math {
 template <typename type> struct vector2;
 template <typename type> struct vector3;
 template <typename type> struct quaternion;
-template <typename simd_type, uint32 rows, uint32 cols> struct matrix;
+template <typename simd_type, uint32_t rows, uint32_t cols> struct matrix;
 } // namespace math
 template <typename character_type = char_utf16> class string_base;
 template <typename... args> class function_reference_array;
@@ -39,14 +44,13 @@ template <typename return_value_type, typename... args> class function_reference
 template <typename value_type, typename error_type> class value_or_error;
 template <typename in_type> struct optional;
 template <typename in_type> struct error_result;
-template <typename value_type> using value_or_error_code = value_or_error<value_type, int32>;
+template <typename value_type> using value_or_error_code = value_or_error<value_type, int32_t>;
 template <typename value_type> using value_or_error_message = value_or_error<value_type, string_base<char_utf32>>;
 } // namespace edvar
 #include "meta/meta.h" // IWYU pragma: export
 
 #include "memory/operations.h" // IWYU pragma: export
 #include "memory/allocators.h" // IWYU pragma: export
-#include "utils/objects.h"     // IWYU pragma: export
 #include "math/math.h"         // IWYU pragma: export
 
 // forward declarations
@@ -54,6 +58,7 @@ namespace edvar {
 namespace internationalization {
 class locale;
 }
+struct convertible_to_string;
 namespace container {
 template <typename storage_type, typename allocator_type = memory::heap_allocator<storage_type>> class array;
 template <typename storage_type> class array_view;
@@ -75,7 +80,9 @@ using string_utf8 = edvar::string_base<char_utf8>;
 using string = edvar::string_base<char_utf16>;
 
 } // namespace edvar
-#include "utils/to_string.h"   // IWYU pragma: export
-#include "containers/string.h" // IWYU pragma: export
+#include "utils/to_string.h"             // IWYU pragma: export
+#include "containers/string.h"           // IWYU pragma: export
+#include "utils/convertible_to_string.h" // IWYU pragma: export
 
-#include "containers/map.h" // IWYU pragma: export
+#include "containers/map.h"    // IWYU pragma: export
+#include "platform/platform.h" // IWYU pragma: export

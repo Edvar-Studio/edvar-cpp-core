@@ -20,7 +20,7 @@ double ln(const double& value) {
     // Fast natural logarithm approximation using bit manipulation and a polynomial
     union {
         double d;
-        uint64 i;
+        uint64_t i;
     } u = {value};
 
     // Extract exponent and mantissa
@@ -45,12 +45,12 @@ double log(const double& value, const double& base) {
     }
     return ln(value) / ln(base);
 }
-int64 log(const int64& value, const int64& base) {
+int64 log(constint64_t& value, constint64_t& base) {
     if (base <= 1) [[unlikely]] {
         return 0;
     }
-    uint64 result = 0;
-    uint64 current = value;
+    uint64_t result = 0;
+    uint64_t current = value;
     while (current >= base) {
         current /= base;
         result++;
@@ -61,8 +61,8 @@ int log(const int& value, const int& base) {
     if (base <= 1) [[unlikely]] {
         return 0;
     }
-    uint32 result = 0;
-    uint32 current = value;
+    uint32_t result = 0;
+    uint32_t current = value;
     while (current >= base) {
         current /= base;
         result++;
@@ -135,7 +135,7 @@ double exp(const double& value, const double& tolerance) {
     return result;
 }
 
-double square_root(const uint32& value, const double& tolerance) {
+double square_root(const uint32_t& value, const double& tolerance) {
     simd::simd_128d vec(0, static_cast<double>(value));
     vec.sqrt_inline();
     return vec.y;
@@ -159,13 +159,13 @@ double square_root(const double& value, const double& tolerance) {
     return vec.y;
 }
 
-double square_root(const int64& value, const double& tolerance) {
+double square_root(constint64_t& value, const double& tolerance) {
     simd::simd_128d vec(0, static_cast<double>(value));
     vec.sqrt_inline();
     return vec.y;
 }
 
-double square_root(const uint64& value, const double& tolerance) {
+double square_root(const uint64_t& value, const double& tolerance) {
     simd::simd_128d vec(0, static_cast<double>(value));
     vec.sqrt_inline();
     return vec.y;

@@ -3,9 +3,9 @@
 
 namespace edvar::math {
 
-template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
+template <typename simd_type, uint32_t rows, uint32_t cols> struct matrix {
     using value_type = typename simd::meta::simd_traits<simd_type>::element_type;
-    static constexpr uint32 simd_width = simd::meta::simd_traits<simd_type>::element_count;
+    static constexpr uint32_t simd_width = simd::meta::simd_traits<simd_type>::element_count;
     static_assert(simd::meta::simd_traits<simd_type>::is_simd);
 
     static_assert(simd_width >= rows || simd_width >= cols,
@@ -36,7 +36,7 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
         }
     }
     matrix(const matrix& other) : simd_data(other.simd_data) {}
-    matrix(matrix&& other) noexcept : simd_data(edvar::move(other.simd_data)) {}
+    matrix(matrix&& other) noexcept : simd_data(std::move(other.simd_data)) {}
     matrix(const simd_type& other) : simd_data(other) {}
 
     matrix& operator=(const matrix& other) {
@@ -47,18 +47,18 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
     }
     matrix& operator=(matrix&& other) noexcept {
         if (this != &other) {
-            simd_data = edvar::move(other.simd_data);
+            simd_data = std::move(other.simd_data);
         }
         return *this;
     }
 
-    value_type& operator()(const uint32 row, const uint32 col) { return data[row][col]; }
-    const value_type& operator()(const uint32 row, const uint32 col) const { return data[row][col]; }
+    value_type& operator()(const uint32_t row, const uint32_t col) { return data[row][col]; }
+    const value_type& operator()(const uint32_t row, const uint32_t col) const { return data[row][col]; }
 
     template <typename new_type> matrix<new_type, rows, cols> convert_to() const {
         matrix<new_type, rows, cols> result;
-        for (uint32 i_simd_rows = 0; i_simd_rows < simd_rows; ++i_simd_rows) {
-            for (uint32 i_simd_cols = 0; i_simd_cols < simd_cols; ++i_simd_cols) {
+        for (uint32_t i_simd_rows = 0; i_simd_rows < simd_rows; ++i_simd_rows) {
+            for (uint32_t i_simd_cols = 0; i_simd_cols < simd_cols; ++i_simd_cols) {
                 result.simd_data[i_simd_rows][i_simd_cols] =
                     simd_data[i_simd_rows][i_simd_cols].template convert_to<new_type>();
             }
@@ -66,7 +66,7 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
         return result;
     }
     // matrix to matrix operations
-    template <typename other_type, uint32 other_rows, uint32 other_cols>
+    template <typename other_type, uint32_t other_rows, uint32_t other_cols>
     matrix<simd_type, rows, other_cols>& operator*=(const matrix<other_type, other_rows, other_cols>& other) {
         static_assert(cols == other_rows, "Incompatible matrix dimensions for multiplication");
         if constexpr (std::is_same_v<simd_type, other_type>) {
@@ -82,21 +82,21 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
         return *this;
     }
 
-    template <typename other_type, uint32 other_rows, uint32 other_cols>
+    template <typename other_type, uint32_t other_rows, uint32_t other_cols>
     matrix<simd_type, rows, other_cols> operator*(const matrix<other_type, other_rows, other_cols>& other) const {
         return matrix<simd_type, rows, other_cols>(*this) *= other;
     }
     template <typename other_type> matrix& operator+=(const matrix<other_type, rows, cols>& other) {
         if constexpr (std::is_same_v<simd_type, other_type>) {
-            for (uint32 r = 0; r < simd_rows; ++r) {
-                for (uint32 c = 0; c < simd_cols; ++c) {
+            for (uint32_t r = 0; r < simd_rows; ++r) {
+                for (uint32_t c = 0; c < simd_cols; ++c) {
                     simd_data[r][c] += other.simd_data[r][c];
                 }
             }
         } else {
             matrix<simd_type, rows, cols> converted_other = other.template convert_to<simd_type>();
-            for (uint32 r = 0; r < simd_rows; ++r) {
-                for (uint32 c = 0; c < simd_cols; ++c) {
+            for (uint32_t r = 0; r < simd_rows; ++r) {
+                for (uint32_t c = 0; c < simd_cols; ++c) {
                     simd_data[r][c] += converted_other.simd_data[r][c];
                 }
             }
@@ -109,15 +109,15 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
 
     template <typename other_type> matrix operator-=(const matrix<other_type, rows, cols>& other) {
         if constexpr (std::is_same_v<simd_type, other_type>) {
-            for (uint32 r = 0; r < simd_rows; ++r) {
-                for (uint32 c = 0; c < simd_cols; ++c) {
+            for (uint32_t r = 0; r < simd_rows; ++r) {
+                for (uint32_t c = 0; c < simd_cols; ++c) {
                     simd_data[r][c] -= other.simd_data[r][c];
                 }
             }
         } else {
             matrix<simd_type, rows, cols> converted_other = other.template convert_to<simd_type>();
-            for (uint32 r = 0; r < simd_rows; ++r) {
-                for (uint32 c = 0; c < simd_cols; ++c) {
+            for (uint32_t r = 0; r < simd_rows; ++r) {
+                for (uint32_t c = 0; c < simd_cols; ++c) {
                     simd_data[r][c] -= converted_other.simd_data[r][c];
                 }
             }
@@ -131,8 +131,8 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
     // scalar operations
     matrix& operator+=(const value_type scalar) {
         simd_type simd_scalar(scalar);
-        for (uint32 r = 0; r < simd_rows; ++r) {
-            for (uint32 c = 0; c < simd_cols; ++c) {
+        for (uint32_t r = 0; r < simd_rows; ++r) {
+            for (uint32_t c = 0; c < simd_cols; ++c) {
                 simd_data[r][c] += simd_scalar;
             }
         }
@@ -141,8 +141,8 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
     matrix operator+(const value_type scalar) const { return matrix(*this) += scalar; }
     matrix& operator-=(const value_type scalar) {
         simd_type simd_scalar(scalar);
-        for (uint32 r = 0; r < simd_rows; ++r) {
-            for (uint32 c = 0; c < simd_cols; ++c) {
+        for (uint32_t r = 0; r < simd_rows; ++r) {
+            for (uint32_t c = 0; c < simd_cols; ++c) {
                 simd_data[r][c] -= simd_scalar;
             }
         }
@@ -151,8 +151,8 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
     matrix operator-(const value_type scalar) const { return matrix(*this) -= scalar; }
     matrix& operator*=(const value_type scalar) {
         simd_type simd_scalar(scalar);
-        for (uint32 r = 0; r < simd_rows; ++r) {
-            for (uint32 c = 0; c < simd_cols; ++c) {
+        for (uint32_t r = 0; r < simd_rows; ++r) {
+            for (uint32_t c = 0; c < simd_cols; ++c) {
                 simd_data[r][c] *= simd_scalar;
             }
         }
@@ -161,8 +161,8 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
     matrix operator*(const value_type scalar) const { return matrix(*this) *= scalar; }
     matrix& operator/=(const value_type scalar) {
         simd_type simd_scalar(scalar);
-        for (uint32 r = 0; r < simd_rows; ++r) {
-            for (uint32 c = 0; c < simd_cols; ++c) {
+        for (uint32_t r = 0; r < simd_rows; ++r) {
+            for (uint32_t c = 0; c < simd_cols; ++c) {
                 simd_data[r][c] /= simd_scalar;
             }
         }
@@ -177,9 +177,9 @@ template <typename simd_type, uint32 rows, uint32 cols> struct matrix {
     }
 
     matrix& transpose_inline() {
-        for (uint32 r = 0; r < rows; ++r) {
-            for (uint32 c = r + 1; c < cols; ++c) {
-                edvar::swap(data[r][c], data[c][r]);
+        for (uint32_t r = 0; r < rows; ++r) {
+            for (uint32_t c = r + 1; c < cols; ++c) {
+                std::swap(data[r][c], data[c][r]);
             }
         }
         return *this;

@@ -49,6 +49,7 @@ class EdvarCppCore : ModuleBase
 
         if(context.Toolchain.Name == "msvc")
         {
+            this.Definitions.Private.Add("UNICODE");
             this.CompilerOptions.Add("/diagnostics:caret");
         }
 

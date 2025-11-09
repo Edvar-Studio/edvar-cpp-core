@@ -19,9 +19,9 @@ public:
     bool has_previous() const;
     pair_ref next();
     pair_ref previous();
-    map_iterator& seek(int32 index);
+    map_iterator& seekint32_t index);
     map_iterator& reset();
-    int32 position() const;
+   int32_t position() const;
     pair_ref current() const;
 
     map_iterator& operator++();
@@ -40,10 +40,10 @@ public:
 
 private:
     data_type _map;
-    uint32 _bucket_index;
-    uint32 _index_in_bucket;
+    uint32_t _bucket_index;
+    uint32_t _index_in_bucket;
     // cached absolute position (0..map.length()) for seek/position
-    int32 _absolute_pos;
+   int32_t _absolute_pos;
 
     // advance to next valid element starting from current indices
     void advance_to_next();
@@ -92,21 +92,21 @@ template <typename map_type, bool is_const>
 inline void map_iterator<map_type, is_const>::advance_to_next() {
     if (!_map)
         return;
-    int32 total = _map->length();
+   int32_t total = _map->length();
     if (_absolute_pos >= total) {
         // set to end
-        _bucket_index = static_cast<uint32>(_map->_buckets.length());
+        _bucket_index = static_cast<uint32_t>(_map->_buckets.length());
         _index_in_bucket = 0;
         _absolute_pos = total;
         return;
     }
     // start scanning from current bucket/index
-    uint32 buckets = static_cast<uint32>(_map->_buckets.length());
-    uint32 bi = _bucket_index;
-    uint32 ii = _index_in_bucket;
+    uint32_t buckets = static_cast<uint32_t>(_map->_buckets.length());
+    uint32_t bi = _bucket_index;
+    uint32_t ii = _index_in_bucket;
     for (; bi < buckets; ++bi) {
         const auto& bucket = _map->_buckets[bi];
-        for (; ii < static_cast<uint32>(bucket.length()); ++ii) {
+        for (; ii < static_cast<uint32_t>(bucket.length()); ++ii) {
             // found a valid entry
             _bucket_index = bi;
             _index_in_bucket = ii;
@@ -131,18 +131,18 @@ inline void map_iterator<map_type, is_const>::retreat_to_previous() {
         return;
     }
     // start searching backwards from current bucket/index
-    int32 pos = _absolute_pos - 1;
+   int32_t pos = _absolute_pos - 1;
     // naive approach: walk from beginning until pos to find bucket/index
     _bucket_index = 0;
     _index_in_bucket = 0;
-    int32 count = 0;
-    uint32 buckets = static_cast<uint32>(_map->_buckets.length());
-    for (uint32 bi = 0; bi < buckets; ++bi) {
+   int32_t count = 0;
+    uint32_t buckets = static_cast<uint32_t>(_map->_buckets.length());
+    for (uint32_t bi = 0; bi < buckets; ++bi) {
         const auto& bucket = _map->_buckets[bi];
-        for (int32 i = 0; i < bucket.length(); ++i) {
+        for int32_t i = 0; i < bucket.length(); ++i) {
             if (count == pos) {
                 _bucket_index = bi;
-                _index_in_bucket = static_cast<uint32>(i);
+                _index_in_bucket = static_cast<uint32_t>(i);
                 _absolute_pos = pos;
                 return;
             }
@@ -170,7 +170,7 @@ inline typename map_iterator<map_type, is_const>::pair_ref map_iterator<map_type
 }
 
 template <typename map_type, bool is_const>
-inline map_iterator<map_type, is_const>& map_iterator<map_type, is_const>::seek(int32 index) {
+inline map_iterator<map_type, is_const>& map_iterator<map_type, is_const>::seekint32_t index) {
     if (!_map) {
         _absolute_pos = 0;
         return *this;
@@ -180,14 +180,14 @@ inline map_iterator<map_type, is_const>& map_iterator<map_type, is_const>::seek(
     if (index > _map->length())
         index = _map->length();
     // walk to find the index'th element
-    int32 count = 0;
-    uint32 buckets = static_cast<uint32>(_map->_buckets.length());
-    for (uint32 bi = 0; bi < buckets; ++bi) {
+   int32_t count = 0;
+    uint32_t buckets = static_cast<uint32_t>(_map->_buckets.length());
+    for (uint32_t bi = 0; bi < buckets; ++bi) {
         const auto& bucket = _map->_buckets[bi];
-        for (int32 i = 0; i < bucket.length(); ++i) {
+        for int32_t i = 0; i < bucket.length(); ++i) {
             if (count == index) {
                 _bucket_index = bi;
-                _index_in_bucket = static_cast<uint32>(i);
+                _index_in_bucket = static_cast<uint32_t>(i);
                 _absolute_pos = index;
                 return *this;
             }
@@ -211,12 +211,12 @@ inline map_iterator<map_type, is_const>& map_iterator<map_type, is_const>::reset
 }
 
 template <typename map_type, bool is_const>
-inline int32 map_iterator<map_type, is_const>::position() const { return _absolute_pos; }
+inlineint32_t map_iterator<map_type, is_const>::position() const { return _absolute_pos; }
 
 template <typename map_type, bool is_const>
 inline typename map_iterator<map_type, is_const>::pair_ref map_iterator<map_type, is_const>::current() const {
     const auto& bucket = _map->_buckets[_bucket_index];
-    return bucket[static_cast<int32>(_index_in_bucket)].pair;
+    return bucket[static_castint32_t>(_index_in_bucket)].pair;
 }
 
 template <typename map_type, bool is_const>
@@ -228,10 +228,10 @@ inline map_iterator<map_type, is_const>& map_iterator<map_type, is_const>::opera
     ++_absolute_pos;
     // move to next index in bucket
     ++_index_in_bucket;
-    uint32 buckets = static_cast<uint32>(_map->_buckets.length());
-    for (uint32 bi = _bucket_index; bi < buckets; ++bi) {
+    uint32_t buckets = static_cast<uint32_t>(_map->_buckets.length());
+    for (uint32_t bi = _bucket_index; bi < buckets; ++bi) {
         const auto& bucket = _map->_buckets[bi];
-        for (uint32 ii = (bi == _bucket_index ? _index_in_bucket : 0); ii < static_cast<uint32>(bucket.length()); ++ii) {
+        for (uint32_t ii = (bi == _bucket_index ? _index_in_bucket : 0); ii < static_cast<uint32_t>(bucket.length()); ++ii) {
             _bucket_index = bi;
             _index_in_bucket = ii;
             return *this;
@@ -279,9 +279,9 @@ inline bool map_iterator<map_type, is_const>::operator==(const map_iterator& oth
 template <typename map_type, bool is_const>
 inline std::enable_if_t<!is_const, map_iterator<map_type, is_const>&>
 map_iterator<map_type, is_const>::replace(const pair_type& p) {
-    if (_map && _bucket_index < static_cast<uint32>(_map->_buckets.length())) {
+    if (_map && _bucket_index < static_cast<uint32_t>(_map->_buckets.length())) {
         auto& bucket = _map->_buckets[_bucket_index];
-        bucket[static_cast<int32>(_index_in_bucket)].pair = p;
+        bucket[static_castint32_t>(_index_in_bucket)].pair = p;
     }
     return *this;
 }
@@ -289,9 +289,9 @@ map_iterator<map_type, is_const>::replace(const pair_type& p) {
 template <typename map_type, bool is_const>
 inline std::enable_if_t<!is_const, map_iterator<map_type, is_const>&>
 map_iterator<map_type, is_const>::replace(pair_type&& p) {
-    if (_map && _bucket_index < static_cast<uint32>(_map->_buckets.length())) {
+    if (_map && _bucket_index < static_cast<uint32_t>(_map->_buckets.length())) {
         auto& bucket = _map->_buckets[_bucket_index];
-        bucket[static_cast<int32>(_index_in_bucket)].pair = edvar::move(p);
+        bucket[static_castint32_t>(_index_in_bucket)].pair = std::move(p);
     }
     return *this;
 }
@@ -300,13 +300,13 @@ template <typename map_type, bool is_const>
 inline std::enable_if_t<!is_const, map_iterator<map_type, is_const>&> map_iterator<map_type, is_const>::remove() {
     if (!_map)
         return *this;
-    if (_bucket_index >= static_cast<uint32>(_map->_buckets.length()))
+    if (_bucket_index >= static_cast<uint32_t>(_map->_buckets.length()))
         return *this;
     auto& bucket = _map->_buckets[_bucket_index];
-    bucket.remove_at(static_cast<int32>(_index_in_bucket));
+    bucket.remove_at(static_castint32_t>(_index_in_bucket));
     --_absolute_pos;
     // adjust indices: if there is still an element at this bucket/index, keep it; otherwise advance
-    if (_index_in_bucket >= static_cast<uint32>(bucket.length())) {
+    if (_index_in_bucket >= static_cast<uint32_t>(bucket.length())) {
         // move to next valid
         advance_to_next();
     }

@@ -22,12 +22,12 @@ void windows_platform::on_fatal(const wchar_t* message) {
     ::FatalExit(0xFFFF);
 }
 
-pair<bool, edvar::string_utf16> find_function_name(uint64 address) {
+pair<bool, edvar::string_utf16> find_function_name(uint64_t address) {
     HANDLE process = GetCurrentProcess();
     SymInitialize(process, nullptr, true);
     // Initialize the SYMBOL_INFO structure
     DWORD64 displacement = 0;
-    uint8 buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
+    uint8_t buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
     PSYMBOL_INFO symbol = reinterpret_cast<PSYMBOL_INFO>(buffer);
     symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
     symbol->MaxNameLen = MAX_SYM_NAME;
@@ -49,14 +49,14 @@ edvar::string_base<char_utf16> edvar::platform_types::windows_platform::get_stac
     for (USHORT i = 0; i < frames; i++) {
         // If pdb is available, it should show the function names as well.
         // Otherwise, it will just show the addresses.
-        pair<bool, edvar::string_utf16> func_name = find_function_name(reinterpret_cast<uint64>(stack[i]));
+        pair<bool, edvar::string_utf16> func_name = find_function_name(reinterpret_cast<uint64_t>(stack[i]));
         result += string::format("{}\t\t{}\n", stack[i], func_name.value());
     }
     delete[] stack;
     return result;
 }
 
-void windows_platform::abort(int32 exit_code, const process_handle& in_process) {
+void windows_platform::abort(int32_t exit_code, const process_handle& in_process) {
     ::TerminateProcess(reinterpret_cast<HANDLE>(in_process ? in_process : GetCurrentProcess()),
                        static_cast<UINT>(exit_code));
 }
@@ -112,5 +112,49 @@ windows_platform::windows_platform() {
     CoInitializeEx(nullptr, COINIT::COINIT_APARTMENTTHREADED | COINIT::COINIT_DISABLE_OLE1DDE);
 }
 windows_platform::~windows_platform() { CoUninitialize(); }
+void windows_platform::set_process_dpi_awareness(bool is_dpi_aware) {
+#    if defined(WINVER) && (WINVER >= 0x0A00)
+    // Windows 10 and later
+    if (is_dpi_aware) {
+        SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    } else {
+        SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_UNAWARE);
+    }
+#    elif defined(WINVER) && (WINVER >= 0x0603)
+    // Windows 8.1 and later
+    if (is_dpi_aware) {
+        SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+    } else {
+        SetProcessDpiAwareness(PROCESS_DPI_UNAWARE);
+    }
+#    elif defined(WINVER) && (WINVER >= 0x0600)
+    // Windows Vista and later
+    if (is_dpi_aware) {
+        SetProcessDPIAware();
+    } else {
+        // No direct way to disable DPI awareness once set in Windows Vista.
+        // This is a no-op for now.
+    }
+#    endif
+}
+void windows_platform::poll_events(edvar::app::application_base& in_application) {
+    // Handle the message loop for windows
+    MSG msg;
+    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+}
+void windows_platform::create_guid(uint8_t* out_buffer) {
+    GUID guid;
+    HRESULT hr = CoCreateGuid(&guid);
+    if (SUCCEEDED(hr)) {
+        // Copy the GUID bytes to the output buffer
+        memcpy(out_buffer, &guid, sizeof(GUID));
+    } else {
+        // If GUID creation failed, fill the buffer with zeros
+        memset(out_buffer, 0, sizeof(GUID));
+    }
+}
 } // namespace edvar::platform_types
 #endif

@@ -2,6 +2,11 @@
 #include "internationalization/locale.h"
 #include "unicode/ustring.h" // IWYU pragma: keep used for u_str functions.
 #include "unicode/coll.h"
+#include "unicode/numfmt.h"
+#include "unicode/unistr.h"
+#include "unicode/parsepos.h"
+#include <cstdlib>
+
 namespace edvar::c_string {
 char_utf8* create_utf8(const char_utf16* in_string) {
     if (!in_string)
@@ -252,8 +257,8 @@ int compare(const char_utf16* str1, const char_utf16* str2, bool case_sensitive,
         return 1;
     }
     UErrorCode status = U_ZERO_ERROR;
-    const int32_t length1 = static_cast<int32_t>(edvar::c_string::string_length(str1));
-    const int32_t length2 = static_cast<int32_t>(edvar::c_string::string_length(str2));
+    int32_t length1 = static_cast<int32_t>(edvar::c_string::string_length(str1));
+    int32_t length2 = static_cast<int32_t>(edvar::c_string::string_length(str2));
     if (length1 != length2) {
         return (length1 < length2) ? -1 : 1;
     }
@@ -271,7 +276,6 @@ int compare(const char_utf16* str1, const char_utf16* str2, bool case_sensitive,
         coll->compare(reinterpret_cast<const UChar*>(str1), length1, reinterpret_cast<const UChar*>(str2), length2);
     delete coll;
     return cmp;
-    
 }
 int compare(const char_utf32* str1, const char_utf32* str2, bool case_sensitive,
             const edvar::internationalization::locale* locale) {
@@ -291,4 +295,60 @@ int compare(const char_utf32* str1, const char_utf32* str2, bool case_sensitive,
 bool is_whitespace(char_utf8 ch) { return is_whitespace(static_cast<char_utf16>(ch)); }
 bool is_whitespace(char_utf16 ch) { return u_isUWhiteSpace(static_cast<UChar32>(ch)); }
 bool is_whitespace(char_utf32 ch) { return is_whitespace(static_cast<char_utf16>(ch)); }
+
+// Parsing/wrapper implementations declared in the public header.
+value_or_error_code<int64_t> parse_signed(const char_utf16* string, int base,
+                                          const edvar::internationalization::locale* locale) {
+    if (base != 10) {
+        return value_or_error_code<int64_t>::from_value(
+            std::move(std::strtoll(reinterpret_cast<const char*>(string), nullptr, base)));
+    }
+    if (!locale)
+        locale = &edvar::internationalization::locale::current();
+    // Use ICU number parsing with the provided locale.
+    UErrorCode status = U_ZERO_ERROR;
+    const icu::Locale* icu_loc = reinterpret_cast<const icu::Locale*>(locale->get_icu_locale_data());
+    icu::UnicodeString ustr = icu::UnicodeString(string);
+    icu::NumberFormat* nf = icu::NumberFormat::createInstance(*icu_loc, status);
+    if (U_FAILURE(status) || !nf) {
+        delete nf;
+        return value_or_error_code<int64_t>::from_error(1);
+    }
+    icu::Formattable fmt;
+    icu::ParsePosition parsePos(0);
+    nf->parse(ustr, fmt, parsePos);
+    int32_t parsedCount = parsePos.getIndex();
+    if (parsedCount == 0) {
+        delete nf;
+        return value_or_error_code<int64_t>::from_error(2);
+    }
+    int64_t d = fmt.getInt64();
+    delete nf;
+    return value_or_error_code<int64_t>::from_value(std::move(d));
+}
+
+value_or_error_code<double> parse_double(const char_utf16* string, const edvar::internationalization::locale* locale) {
+    if (!locale)
+        locale = &edvar::internationalization::locale::current();
+    // Use ICU number parsing with the provided locale.
+    UErrorCode status = U_ZERO_ERROR;
+    const icu::Locale* icu_loc = reinterpret_cast<const icu::Locale*>(locale->get_icu_locale_data());
+    icu::UnicodeString ustr = icu::UnicodeString(string);
+    icu::NumberFormat* nf = icu::NumberFormat::createInstance(*icu_loc, status);
+    if (U_FAILURE(status) || !nf) {
+        delete nf;
+        return value_or_error_code<double>::from_error(1);
+    }
+    icu::Formattable fmt;
+    icu::ParsePosition parsePos(0);
+    nf->parse(ustr, fmt, parsePos);
+    int32_t parsedCount = parsePos.getIndex();
+    if (parsedCount == 0) {
+        delete nf;
+        return value_or_error_code<double>::from_error(1);
+    }
+    double d = fmt.getDouble();
+    delete nf;
+    return value_or_error_code<double>::from_value(d);
+}
 } // namespace edvar::c_string

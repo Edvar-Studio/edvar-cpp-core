@@ -17,7 +17,7 @@ public:
     const char* name() const;
     const char* language_iso3() const;
     const char* country_iso3() const;
-    uint32 lcid() const;
+    uint32_t lcid() const;
     bool is_right_to_left() const;
 
     edvar::string_utf16 display_language(const locale* in_locale = nullptr) const;
@@ -36,11 +36,11 @@ public:
 private:
     const void* _icu_locale_data = nullptr;
     // cache display names for other locales
-    map<const locale*, edvar::string_utf16> _display_name_language_cache;
-    map<const locale*, edvar::string_utf16> _display_name_script_cache;
-    map<const locale*, edvar::string_utf16> _display_name_country_cache;
-    map<const locale*, edvar::string_utf16> _display_name_variant_cache;
-    map<const locale*, edvar::string_utf16> _display_name_cache;
+    container::map<const locale*, edvar::string_utf16> _display_name_language_cache;
+    container::map<const locale*, edvar::string_utf16> _display_name_script_cache;
+    container::map<const locale*, edvar::string_utf16> _display_name_country_cache;
+    container::map<const locale*, edvar::string_utf16> _display_name_variant_cache;
+    container::map<const locale*, edvar::string_utf16> _display_name_cache;
 
     locale() = default;
     ~locale();

@@ -254,7 +254,7 @@ private:
 };
 
 struct function_reference_array_handle {
-    uint32 id;
+    uint32_t id;
 };
 
 template <typename... args> class function_reference_array {
@@ -289,9 +289,9 @@ public:
 private:
     struct handle_manager {
         container::map<function_reference_array_handle, function_reference<void, args...>> handle_map;
-        uint32 _next_id = 1;
+        uint32_t _next_id = 1;
         // probably won't ever reach this many, but just in case
-        static constexpr uint32 MAX_ID = 0xFFFFF000;
+        static constexpr uint32_t MAX_ID = 0xFFFFF000;
 
         function_reference_array_handle allocate_handle() {
             // make sure handle id is unique

@@ -3,27 +3,26 @@
 
 namespace edvar {
 namespace __private {
-template <uint32 index, typename storage_type> struct tuple_leaf {
+template <uint32_t index, typename storage_type> struct tuple_leaf {
     storage_type value;
 };
 
-template <uint32 index, typename... types> struct tuple_impl;
+template <uint32_t index, typename... types> struct tuple_impl;
 
-template <uint32 index> struct tuple_impl<index> {};
+template <uint32_t index> struct tuple_impl<index> {};
 
-template <uint32 i, typename head, typename... tail>
+template <uint32_t i, typename head, typename... tail>
 struct tuple_impl<i, head, tail...> : tuple_leaf<i, head>, tuple_impl<i + 1, tail...> {
-    using tuple_leaf<i, head>::value;
-    template <uint32 j> auto& get() {
+    template <uint32_t j> auto& get() {
         if constexpr (i == j) {
-            return value;
+            return this->value;
         } else {
             return tuple_impl<i + 1, tail...>::template get<j>();
         }
     }
-    template <uint32 j> const auto& get() const {
+    template <uint32_t j> const auto& get() const {
         if constexpr (i == j) {
-            return value;
+            return this->value;
         } else {
             return tuple_impl<i + 1, tail...>::template get<j>();
         }
@@ -36,25 +35,25 @@ public:
     template <typename... args> static tuple make_tuple(args... a) { return tuple<args...>(a...); }
     tuple() = default;
     tuple(types... a) : impl{a...} {}
-    void set_data_from_bytes(uint8* bytes) { set_data_from_bytes_helper<0, types...>(*this, bytes); }
-    void get_data_as_bytes(uint8* buffer) { get_data_as_bytes_helper<0, types...>(*this, buffer); }
+    void set_data_from_bytes(uint8_t* bytes) { set_data_from_bytes_helper<0, types...>(*this, bytes); }
+    void get_data_as_bytes(uint8_t* buffer) { get_data_as_bytes_helper<0, types...>(*this, buffer); }
 
-    template <uint32 index> auto& get() { return impl.template get<index>(); }
-    template <uint32 index> const auto& get() const { return impl.template get<index>(); }
-    constexpr uint32 get_total_byte_size() { return get_total_byte_size_of_pack<0, types...>(); }
+    template <uint32_t index> auto& get() { return impl.template get<index>(); }
+    template <uint32_t index> const auto& get() const { return impl.template get<index>(); }
+    constexpr uint32_t get_total_byte_size() { return get_total_byte_size_of_pack<0, types...>(); }
     // apply
     template <typename return_type> return_type apply(return_type (*func)(types...)) {
         return apply_implementation(func, meta::make_index_sequence<sizeof...(types)>());
     }
 
 private:
-    template <typename return_type, uint32... index_sequence>
+    template <typename return_type, uint32_t... index_sequence>
     return_type apply_implementation(return_type (*func)(types...), meta::index_sequence<index_sequence...>) {
         return func(((get<index_sequence>()), ...));
     }
 
-    template <uint32 index, typename head, typename... tail>
-    constexpr uint32 get_total_byte_size_of_pack(uint32 start = 0) {
+    template <uint32_t index, typename head, typename... tail>
+    constexpr uint32_t get_total_byte_size_of_pack(uint32_t start = 0) {
         start += sizeof(head);
         if constexpr (sizeof...(tail) == 0) {
             return start;
@@ -62,8 +61,8 @@ private:
             return start += get_total_byte_size_of_pack(start);
         }
     }
-    template <uint32 i, typename current, typename... args>
-    void set_data_from_bytes_helper(tuple& in_tuple, uint8* bytes) {
+    template <uint32_t i, typename current, typename... args>
+    void set_data_from_bytes_helper(tuple& in_tuple, uint8_t* bytes) {
         if constexpr (i >= sizeof...(args)) {
             return;
         }
@@ -71,15 +70,15 @@ private:
         bytes += sizeof(current);
         return set_data_from_bytes_helper<i + 1, args...>(in_tuple, bytes);
     }
-    template <uint32 i, typename current, typename... args>
-    void get_data_as_bytes_helper(const tuple& in_tuple, uint8* buffer) {
+    template <uint32_t i, typename current, typename... args>
+    void get_data_as_bytes_helper(const tuple& in_tuple, uint8_t* buffer) {
         if constexpr (i >= sizeof...(args)) {
             return;
         }
         auto d = in_tuple.get<i>();
-        constexpr uint32 s = sizeof(current);
+        constexpr uint32_t s = sizeof(current);
         for (int index = 0; index < s; ++index) {
-            buffer[index] = reinterpret_cast<uint8*>(d)[index];
+            buffer[index] = reinterpret_cast<uint8_t*>(d)[index];
         }
         buffer += s;
         return get_data_as_bytes_helper<i + 1, args...>(in_tuple, buffer);
@@ -99,4 +98,10 @@ public:
     const key_type& key() const { return (this->template get<0>()); }
     const value_type& value() const { return (this->template get<1>()); }
 };
+
+
+template <typename... Args> inline auto forward_as_tuple(Args&&... args) -> edvar::tuple<Args&&...> {
+    return edvar::tuple<Args&&...>(std::forward<Args>(args)...);
+}
 } // namespace edvar
+

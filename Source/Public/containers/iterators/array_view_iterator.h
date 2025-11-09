@@ -6,7 +6,7 @@ public:
     using data_type = std::conditional_t<is_const, const storage_type*, storage_type*>;
     using data_ref_type = std::conditional_t<is_const, const storage_type&, storage_type&>;
 
-    array_view_iterator(storage_type* start, uint32 length);
+    array_view_iterator(storage_type* start, uint32_t length);
     array_view_iterator(const array_view<storage_type>& view);
     array_view_iterator(const array_view_iterator& other);
     array_view_iterator(array_view_iterator&& other) noexcept;
@@ -16,8 +16,8 @@ public:
     bool has_previous() const { return _current_index > 0; }
     data_ref_type next() { return _data[_current_index++]; }
     data_ref_type previous() { return _data[--_current_index]; }
-    array_view_iterator& seek(int32 index);
-    int32 position() const { return static_cast<int32>(_current_index); }
+    array_view_iterator& seek(int32_t index);
+    int32_t position() const { return static_cast<int32_t>(_current_index); }
     data_ref_type current() const { return _data[_current_index]; }
     array_view_iterator& operator++();
     array_view_iterator operator++(int);
@@ -30,8 +30,8 @@ public:
 
 private:
     data_type _data;
-    uint32 _length;
-    uint32 _current_index;
+    uint32_t _length;
+    uint32_t _current_index;
 };
 
 
@@ -73,13 +73,13 @@ inline array_view_iterator<storage_type, is_const>& array_view_iterator<storage_
 }
 
 template <typename storage_type, bool is_const>
-inline array_view_iterator<storage_type, is_const>& array_view_iterator<storage_type, is_const>::seek(int32 index) {
+inline array_view_iterator<storage_type, is_const>& array_view_iterator<storage_type, is_const>::seek(int32_t index) {
     if (index < 0) {
         _current_index = 0;
-    } else if (static_cast<uint32>(index) > _length) {
+    } else if (static_cast<uint32_t>(index) > _length) {
         _current_index = _length;
     } else {
-        _current_index = static_cast<uint32>(index);
+        _current_index = static_cast<uint32_t>(index);
     }
     return *this;
 }
@@ -97,7 +97,7 @@ inline array_view_iterator<storage_type, is_const>::array_view_iterator(const ar
     : _data(other._data), _length(other._length), _current_index(other._current_index) {}
 
 template <typename storage_type, bool is_const>
-inline array_view_iterator<storage_type, is_const>::array_view_iterator(storage_type* start, uint32 length)
+inline array_view_iterator<storage_type, is_const>::array_view_iterator(storage_type* start, uint32_t length)
     : _data(start), _length(length), _current_index(0) {}
 
 } // namespace edvar::container::iterator

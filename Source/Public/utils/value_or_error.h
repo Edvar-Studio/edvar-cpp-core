@@ -6,7 +6,7 @@ public:
     value_or_error() : _state(ERROR), _value(), _error() {}
     value_or_error(const value_or_error& other) : _state(other._state), _value(other._value), _error(other._error) {}
     value_or_error(value_or_error&& other) noexcept
-        : _state(other._state), _value(edvar::move(other._value)), _error(edvar::move(other._error)) {}
+        : _state(other._state), _value(std::move(other._value)), _error(std::move(other._error)) {}
     ~value_or_error() = default;
     static value_or_error from_value(const value_type& value) {
         value_or_error voe;
@@ -17,7 +17,7 @@ public:
     static value_or_error from_value(value_type&& value) {
         value_or_error voe;
         voe._state = VALUE;
-        voe._value = edvar::move(value);
+        voe._value = std::move(value);
         return voe;
     }
     static value_or_error from_error(const error_type& error) {
@@ -29,7 +29,7 @@ public:
     static value_or_error from_error(error_type&& error) {
         value_or_error voe;
         voe._state = ERROR;
-        voe._error = edvar::move(error);
+        voe._error = std::move(error);
         return voe;
     }
 
@@ -56,7 +56,7 @@ public:
         return *this;
     }
     value_or_error& attach_value_without_state_change(value_type&& value) {
-        _value = edvar::move(value);
+        _value = std::move(value);
         return *this;
     }
     value_or_error& attach_error_without_state_change(const error_type& error) {
@@ -64,7 +64,7 @@ public:
         return *this;
     }
     value_or_error& attach_error_without_state_change(error_type&& error) {
-        _error = edvar::move(error);
+        _error = std::move(error);
         return *this;
     }
 
