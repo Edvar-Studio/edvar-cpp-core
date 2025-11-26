@@ -1,4 +1,5 @@
 .ebuild/
+.idea/
 .cache/
 Binaries/
 include/
