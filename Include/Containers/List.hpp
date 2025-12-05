@@ -338,6 +338,13 @@ public:
         return *this;
     }
 
+    bool operator==(const ListIterator& other) const {
+        return &listRef == &other.listRef && currentIndex == other.currentIndex;
+    }
+    bool operator!=(const ListIterator& other) const { return !((*this) == other); }
+    DataType& operator*() { return listRef[currentIndex]; }
+    DataType* operator->() { return &listRef[currentIndex]; }
+
 private:
     ListT& listRef;
     IndexType currentIndex;

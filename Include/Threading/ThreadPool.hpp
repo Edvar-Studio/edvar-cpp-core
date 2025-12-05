@@ -50,6 +50,11 @@ public:
         }
     }
 
+    int32_t GetRemainingJobCount() {
+        Threading::ScopedLock lock(poolMutex);
+        return jobQueue.Length();
+    }
+
 private:
     typedef Utils::Function<int()> JobFunctionType;
 

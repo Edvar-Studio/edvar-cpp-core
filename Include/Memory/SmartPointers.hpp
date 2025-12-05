@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Memory/Atomic.hpp"
+#include <type_traits>
 namespace Edvar::Memory {
 template <typename T, bool ThreadSafe = false> class SharedPointer;
 template <typename T, bool ThreadSafe = false> class SharedReference;
@@ -331,6 +332,7 @@ private:
 };
 } // namespace Edvar::Memory
 
+namespace Edvar {
 template <typename T, bool ThreadSafe = false> using WeakPointer = Edvar::Memory::WeakPointer<T, ThreadSafe>;
 
 template <typename T, bool ThreadSafe = false> using SharedPointer = Edvar::Memory::SharedPointer<T, ThreadSafe>;
@@ -338,3 +340,15 @@ template <typename T, bool ThreadSafe = false> using SharedPointer = Edvar::Memo
 template <typename T, bool ThreadSafe = false> using SharedReference = Edvar::Memory::SharedReference<T, ThreadSafe>;
 
 template <typename T, bool ThreadSafe = false> using UniquePointer = Edvar::Memory::UniquePointer<T>;
+
+template <typename T, typename... ArgsT>
+UniquePointer<T> MakeUnique(ArgsT&&... args)
+    requires(std::is_constructible_v<T, ArgsT...>)
+{
+    return UniquePointer<T>(new T(std::forward<ArgsT>(args)...));
+}
+
+template <typename T, typename... ArgsT> SharedPointer<T> MakeShared(ArgsT&&... args) {
+    return SharedPointer<T>(new T(std::forward<ArgsT>(args)...));
+}
+} // namespace Edvar

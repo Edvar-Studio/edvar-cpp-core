@@ -1,18 +1,49 @@
 #pragma once
 
+#include "Threading/ThreadPool.hpp"
+
 namespace Edvar::Testing {
 class ThreadTester;
 class TestManager;
+
+struct TestData {
+    TestData(const String& name, const Utils::Function<void()>& function) : testFunction(function), testName(name) {}
+    Utils::Function<void()> testFunction;
+    Containers::String testName;
+};
 
 /**
  * Manages all the tests. Dispatches threads to run tests in sequence.
  * Threads are used for isolation and .
  */
-class TestManager{
+class TestManager {
+public:
+    TestManager() : threadPool("TestManager_ThreadPool", 1) {}
 
-};
-class ThreadTester{
+    Threading::Mutex testManagerMutex;
+    static void Initialize() { instance = MakeUnique<TestManager>(); }
+    static TestManager* Get() { return instance.Get(); }
 
+    void RegisterTest(const String& testName, const Utils::Function<void()>& testFunction) {
+        Threading::ScopedLock lock(testManagerMutex);
+        tests.Add(TestData(testName, testFunction));
+        auto testJob = [this, testName]() -> int {
+            for (const TestData& test : tests) {
+                if (test.testName == testName) {
+                    test.testFunction();
+                    break;
+                }
+            }
+            return 0;
+        };
+        Utils::Function<int()> boundTestJob = testJob;
+        threadPool.EnqueueJob(boundTestJob);
+    }
+
+private:
+    Threading::ThreadPool threadPool;
+    static UniquePointer<TestManager> instance;
+    Containers::List<TestData> tests;
 };
 
 namespace Assert {
