@@ -30,7 +30,7 @@ class EdvarCppCore : ModuleBase
         }
 
         // Add ICU combined as a static library to this module
-        this.Dependencies.Public.Add("static:ThirdParty/icu/icu.ebuild.cs");
         this.Dependencies.Public.Add("ThirdParty/mimalloc/mimalloc.ebuild.cs");
+        this.Dependencies.Public.Add("static:ThirdParty/icu/icu.ebuild.cs");
     }
 }

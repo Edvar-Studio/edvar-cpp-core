@@ -1,6 +1,5 @@
 #include "Platform/IPlatform.hpp"
 
-#include "unicode/ustring.h"
 #if WITH_MIMALLOC
 #    include "mimalloc-new-delete.h" // IWYU pragma: keep
 #    include "Memory/MiMemoryAllocator.hpp"

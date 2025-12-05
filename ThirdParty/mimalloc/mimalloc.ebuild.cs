@@ -73,6 +73,7 @@ public class Mimalloc : ModuleBase
             "src/options.c",
             "src/os.c",
             "src/page.c",
+            "src/page-map.c",
             "src/random.c",
             "src/stats.c",
             "src/prim/prim.c"
@@ -419,6 +420,7 @@ public class Mimalloc : ModuleBase
         else if (context.RequestedOutput is "static" or "default")
         {
             Definitions.Public.Add("MI_STATIC_LIB=1");
+            Definitions.Public.Add("mi_decl_export=");
             CompilerOptions.AddRange(miCFlagsStatic);
             Libraries.Private.AddRange(miLibraries);
         }
