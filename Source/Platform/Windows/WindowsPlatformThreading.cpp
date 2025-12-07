@@ -1,10 +1,12 @@
 #include "Memory/Atomic.hpp"
 #include "Utils/CString.hpp"
+#include "excpt.h"
 #ifdef _WIN32
 #    include "Platform/Windows/WindowsPlatformThreading.hpp"
 #    include "Platform/IPlatformThreading.hpp"
 #    define WIN32_LEAN_AND_MEAN
 #    include <windows.h>
+#    include <dbghelp.h>
 
 namespace Edvar::Platform::Windows {
 IThreadImplementation& WindowsPlatformThreading::GetCurrentThread() {
@@ -23,11 +25,171 @@ struct ThreadStartParameter {
     IThreadImplementation* ThreadInstance;
 };
 
+// Global thread-local storage for exception information
+thread_local EXCEPTION_POINTERS* g_pExceptionPtrs = nullptr;
+
+int __cdecl AccessViolationFilter(EXCEPTION_POINTERS* pExceptionPtrs) {
+    g_pExceptionPtrs = pExceptionPtrs;
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+
 DWORD __stdcall StartManagedThread(LPVOID lpParameter) {
     const auto params = static_cast<ThreadStartParameter*>(lpParameter);
-    const int32_t returnValue = params->ThreadFunction(params->Argument);
+    int32_t returnValue = 0;
+    __try {
+        returnValue = params->ThreadFunction(params->Argument);
+    } __except (AccessViolationFilter(GetExceptionInformation())) {
+        const DWORD exceptionCode = GetExceptionCode();
+        String reasonMessage =
+            String::PrintF(u"Thread crashed with exception code: 0x%X", static_cast<uint32_t>(exceptionCode));
+        CrashReason reason = CrashReason::Unknown;
+        switch (exceptionCode) {
+        case EXCEPTION_ACCESS_VIOLATION: {
+            reason = CrashReason::AccessViolation;
+            // Provide more details for access violation including address and source location.
+            if (g_pExceptionPtrs != nullptr && g_pExceptionPtrs->ExceptionRecord != nullptr) {
+                PEXCEPTION_RECORD pExceptionRecord = g_pExceptionPtrs->ExceptionRecord;
+
+                // ExceptionInformation[0]: 0 for read, 1 for write, 8 for execute
+                // ExceptionInformation[1]: address of the violation
+                if (pExceptionRecord->NumberParameters >= 2) {
+                    ULONG_PTR accessType = pExceptionRecord->ExceptionInformation[0];
+                    ULONG_PTR violationAddress = pExceptionRecord->ExceptionInformation[1];
+                    const char* accessTypeStr = (accessType == 0)   ? "read"
+                                                : (accessType == 1) ? "write"
+                                                : (accessType == 8) ? "execute"
+                                                                    : "unknown";
+
+                    // Try to get symbol information if debugger symbols are available
+                    DWORD64 moduleBase = SymGetModuleBase64(GetCurrentProcess(), (DWORD64)violationAddress);
+                    if (moduleBase != 0) {
+                        reasonMessage =
+                            String::PrintF(u"Thread crashed due to access violation (%s) at address 0x%llX. Exception "
+                                           u"code: 0x%X (Debugger symbols present)",
+                                           accessTypeStr, violationAddress, static_cast<uint32_t>(exceptionCode));
+                    } else {
+                        reasonMessage = String::PrintF(
+                            u"Thread crashed due to access violation (%s) at address 0x%llX. Exception code: 0x%X",
+                            accessTypeStr, violationAddress, static_cast<uint32_t>(exceptionCode));
+                    }
+                } else {
+                    reasonMessage = String::PrintF(u"Thread crashed due to access violation. Exception code: 0x%X",
+                                                   static_cast<uint32_t>(exceptionCode));
+                }
+            } else {
+                reasonMessage = String::PrintF(u"Thread crashed due to access violation. Exception code: 0x%X",
+                                               static_cast<uint32_t>(exceptionCode));
+            }
+            break;
+        }
+        case EXCEPTION_STACK_OVERFLOW: {
+            reason = CrashReason::StackOverflow;
+            // Provide more details for stack overflow.
+            if (g_pExceptionPtrs != nullptr && g_pExceptionPtrs->ContextRecord != nullptr) {
+// Get the stack pointer from the context
+#    ifdef _M_X64
+                DWORD64 stackPointer = g_pExceptionPtrs->ContextRecord->Rsp;
+#    elif defined(_M_IX86)
+                DWORD stackPointer = g_pExceptionPtrs->ContextRecord->Esp;
+#    elif defined(_M_ARM64)
+                DWORD64 stackPointer = g_pExceptionPtrs->ContextRecord->Sp;
+#    else
+                DWORD64 stackPointer = 0;
+#    endif
+                reasonMessage = String::PrintF(
+                    u"Thread crashed due to stack overflow at stack pointer 0x%llX. Exception code: 0x%X", stackPointer,
+                    static_cast<uint32_t>(exceptionCode));
+            } else {
+                reasonMessage = String::PrintF(u"Thread crashed due to stack overflow. Exception code: 0x%X",
+                                               static_cast<uint32_t>(exceptionCode));
+            }
+            break;
+        }
+        case EXCEPTION_FLT_DENORMAL_OPERAND:
+        case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+        case EXCEPTION_FLT_INEXACT_RESULT:
+        case EXCEPTION_FLT_INVALID_OPERATION:
+        case EXCEPTION_FLT_OVERFLOW:
+        case EXCEPTION_FLT_STACK_CHECK:
+        case EXCEPTION_FLT_UNDERFLOW: {
+            reason = CrashReason::Unknown;
+            const char* floatExceptionStr = "unknown floating-point exception";
+            switch (exceptionCode) {
+            case EXCEPTION_FLT_DENORMAL_OPERAND:
+                floatExceptionStr = "denormal operand";
+                break;
+            case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+                floatExceptionStr = "divide by zero";
+                break;
+            case EXCEPTION_FLT_INEXACT_RESULT:
+                floatExceptionStr = "inexact result";
+                break;
+            case EXCEPTION_FLT_INVALID_OPERATION:
+                floatExceptionStr = "invalid operation";
+                break;
+            case EXCEPTION_FLT_OVERFLOW:
+                floatExceptionStr = "overflow";
+                break;
+            case EXCEPTION_FLT_STACK_CHECK:
+                floatExceptionStr = "stack check";
+                break;
+            case EXCEPTION_FLT_UNDERFLOW:
+                floatExceptionStr = "underflow";
+                break;
+            }
+            reasonMessage = String::PrintF(u"Thread crashed due to floating-point exception (%s). Exception code: 0x%X",
+                                           floatExceptionStr, static_cast<uint32_t>(exceptionCode));
+            break;
+        }
+        case EXCEPTION_INT_DIVIDE_BY_ZERO:
+        case EXCEPTION_INT_OVERFLOW: {
+            reason = CrashReason::Unknown;
+            const char* intExceptionStr =
+                (exceptionCode == EXCEPTION_INT_DIVIDE_BY_ZERO) ? "divide by zero" : "overflow";
+            reasonMessage = String::PrintF(u"Thread crashed due to integer exception (%s). Exception code: 0x%X",
+                                           intExceptionStr, static_cast<uint32_t>(exceptionCode));
+            break;
+        }
+        case EXCEPTION_ILLEGAL_INSTRUCTION:
+        case EXCEPTION_PRIV_INSTRUCTION: {
+            reason = CrashReason::Unknown;
+            const char* instructionStr =
+                (exceptionCode == EXCEPTION_ILLEGAL_INSTRUCTION) ? "illegal instruction" : "privileged instruction";
+            reasonMessage = String::PrintF(u"Thread crashed due to %s. Exception code: 0x%X", instructionStr,
+                                           static_cast<uint32_t>(exceptionCode));
+            break;
+        }
+        case EXCEPTION_IN_PAGE_ERROR: {
+            reason = CrashReason::Unknown;
+            if (g_pExceptionPtrs != nullptr && g_pExceptionPtrs->ExceptionRecord != nullptr) {
+                PEXCEPTION_RECORD pExceptionRecord = g_pExceptionPtrs->ExceptionRecord;
+                if (pExceptionRecord->NumberParameters >= 3) {
+                    ULONG_PTR faultingAddress = pExceptionRecord->ExceptionInformation[1];
+                    ULONG_PTR ntstatus = pExceptionRecord->ExceptionInformation[2];
+                    reasonMessage = String::PrintF(u"Thread crashed due to in-page error at address 0x%llX (NTSTATUS: "
+                                                   u"0x%llX). Exception code: 0x%X",
+                                                   faultingAddress, ntstatus, static_cast<uint32_t>(exceptionCode));
+                } else {
+                    reasonMessage = String::PrintF(u"Thread crashed due to in-page error. Exception code: 0x%X",
+                                                   static_cast<uint32_t>(exceptionCode));
+                }
+            } else {
+                reasonMessage = String::PrintF(u"Thread crashed due to in-page error. Exception code: 0x%X",
+                                               static_cast<uint32_t>(exceptionCode));
+            }
+            break;
+        }
+        default:
+            reason = CrashReason::Unknown;
+            reasonMessage = String::PrintF(u"Thread crashed with unhandled exception code: 0x%X",
+                                           static_cast<uint32_t>(exceptionCode));
+            break;
+        }
+        params->ThreadInstance->OnThreadCrashed.Broadcast(reason, reasonMessage, *params->ThreadInstance);
+    }
     WindowsPlatformThreading::UnregisterThread(params->ThreadInstance);
     delete params;
+    params->ThreadInstance->PreThreadExit.Broadcast(returnValue);
     return static_cast<DWORD>(returnValue);
 }
 

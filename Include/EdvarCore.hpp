@@ -22,13 +22,23 @@
 #    define EDVAR_CPP_CORE_API
 #endif
 
-#include <cstdint>     // IWYU pragma: export
-#include <type_traits> // IWYU pragma: export
-#include <utility>     // IWYU pragma: export
+#if defined(_MSC_VER)
+#    define EDVAR_CPP_CORE_FORCE_INLINE __forceinline
+#elif defined(__GNUC__) || defined(__clang__)
+#    define EDVAR_CPP_CORE_FORCE_INLINE inline __attribute__((always_inline))
+#else
+#    define EDVAR_CPP_CORE_FORCE_INLINE inline
+#endif
+
+#include <cstdint>        // IWYU pragma: export
+#include <type_traits>    // IWYU pragma: export
+#include <utility>        // IWYU pragma: export
+#include "Math/All.hpp"   // IWYU pragma: export
+
+#include "Utils/Hash.hpp" // IWYU pragma: export
 
 #include "Containers/Tuple.hpp"     // IWYU pragma: export
 #include "Memory/SmartPointers.hpp" // IWYU pragma: export
-#include "Utils/Functional.hpp"     // IWYU pragma: export
 
 #include "Threading/Mutex.hpp"                        // IWYU pragma: export
 #include "Memory/Ops.hpp"                             // IWYU pragma: export
@@ -44,3 +54,4 @@ using String = Edvar::Containers::String;
 #include "Containers/List.hpp"   // IWYU pragma: export
 #include "Containers/String.hpp" // IWYU pragma: export
 #include "I18N/Locale.hpp"       // IWYU pragma: export
+#include "Utils/Functional.hpp"  // IWYU pragma: export

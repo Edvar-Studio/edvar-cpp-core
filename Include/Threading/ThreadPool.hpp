@@ -4,7 +4,7 @@
 
 namespace Edvar::Threading {
 
-class ThreadPool {
+class ThreadPool : Memory::EnableSharedFromThis<ThreadPool> {
 public:
     ThreadPool(const Containers::String& name, int32_t maxThreads)
         : poolName(name), taskReadySemaphore(0, maxThreads), maxThreadCount(maxThreads) {
@@ -12,6 +12,7 @@ public:
         for (int32_t i = 0; i < maxThreadCount; ++i) {
             Containers::String threadName = name + u"_Worker_" + Containers::String::PrintF(u"%d", i);
             workerThreads[i] = (&Platform::Get().GetThreading().CreateThread(threadName, WorkerThreadFunction, this));
+            workerThreads[i]->OnThreadCrashed.AddShared(this, &ThreadPool::OnThreadCrashed);
         }
     }
 
@@ -90,5 +91,10 @@ private:
     int32_t maxThreadCount;
     Containers::List<JobFunctionType> jobQueue;
     String poolName;
+
+    void OnThreadCrashed(Platform::CrashReason reason, String reasonMessage,
+                         Platform::IThreadImplementation& threadImpl) {
+
+    }
 };
 } // namespace Edvar::Threading

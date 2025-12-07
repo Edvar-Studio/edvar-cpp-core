@@ -6,6 +6,10 @@ namespace Edvar::Memory {
 template <typename T, bool ThreadSafe = false> class SharedPointer;
 template <typename T, bool ThreadSafe = false> class SharedReference;
 template <typename T, bool ThreadSafe = false> class WeakPointer;
+template <typename T> struct EnableSharedFromThis;
+namespace _z__Private {
+struct EnableSharedFromThisBase {};
+} // namespace _z__Private
 
 template <bool ThreadSafe = false> class ReferenceCounter {
 public:
@@ -111,7 +115,22 @@ protected:
         }
         return *this;
     }
-
+    void SetManagedObject(ValueT* object) {
+        if (object == this->managedObject) {
+            return;
+        }
+        managedObject = object;
+        if constexpr (std::is_base_of_v<_z__Private::EnableSharedFromThisBase, ValueT>) {
+            if (this->managedObject != nullptr) {
+                EnableSharedFromThis<ValueT>* enableShared =
+                    static_cast<EnableSharedFromThis<ValueT>*>(this->managedObject);
+                enableShared->weakThis = WeakPointer<ValueT, ThreadSafe>();
+                enableShared->weakThis.SetCounter(this->Counter);
+                enableShared->weakThis.managedObject = this->managedObject;
+                enableShared->weakThis.template IncreaseCounter<false>();
+            }
+        }
+    }
     ValueT* managedObject;
 };
 
@@ -120,7 +139,7 @@ public:
     SharedPointer() : ReferenceCountedPointerBase<T, ThreadSafe>(new ReferenceCounter<ThreadSafe>()) {}
     ~SharedPointer() override { this->template DecreaseCounter<true>(); }
     explicit SharedPointer(T* object) : ReferenceCountedPointerBase<T, ThreadSafe>(new ReferenceCounter<ThreadSafe>()) {
-        this->managedObject = object;
+        this->SetmanagedObject(object);
     }
 
     SharedPointer<T, ThreadSafe> operator=(T* object) {
@@ -129,14 +148,14 @@ public:
         }
         // Decrease current hard counter
         this->template SetCounter<true>(new ReferenceCounter<ThreadSafe>());
-        this->managedObject = object;
+        this->SetManagedObject(object);
         return *this;
     }
 
     template <typename OtherT, bool OtherThreadSafe>
     SharedPointer(const SharedPointer<OtherT, OtherThreadSafe>& other)
         : ReferenceCountedPointerBase<T, ThreadSafe>(other.Counter) {
-        this->managedObject = other.managedObject;
+        this->SetManagedObject(other.managedObject);
         this->template IncreaseCounter<true>();
     }
 
@@ -146,7 +165,7 @@ public:
     {
         if (this != &other) {
             this->template SetCounter<true>(other.Counter);
-            this->managedObject = other.managedObject;
+            this->SetManagedObject(other.managedObject);
             this->template IncreaseCounter<true>();
         }
         return *this;
@@ -155,18 +174,18 @@ public:
     SharedPointer<T, ThreadSafe>& operator=(SharedPointer<OtherT, OtherThreadSafe>&& other) noexcept {
         if (this != &other) {
             this->template SetCounter<true>(other.Counter);
-            this->managedObject = other.managedObject;
+            this->SetManagedObject(other.managedObject);
             other.Counter = nullptr;
-            other.managedObject = nullptr;
+            other.SetManagedObject(nullptr);
         }
         return *this;
     }
     template <typename OtherT, bool OtherThreadSafe>
     SharedPointer(SharedPointer<OtherT, OtherThreadSafe>&& other) noexcept
         : ReferenceCountedPointerBase<T, ThreadSafe>(other.Counter) {
-        this->managedObject = other.managedObject;
+        this->SetManagedObject(other.managedObject);
         other.Counter = nullptr;
-        other.managedObject = nullptr;
+        other.SetManagedObject(nullptr);
     }
 
     SharedReference<T, ThreadSafe> ToSharedReference() const { return SharedReference<T, ThreadSafe>(*this); }
@@ -176,6 +195,8 @@ public:
     bool operator!=(const SharedPointer& other) const { return !((*this) == other); }
     bool operator==(const T* other) const { return this->managedObject == other; }
     bool operator!=(const T* other) const { return !((*this) == other); }
+    operator SharedReference<T, ThreadSafe>() const { return SharedReference<T, ThreadSafe>(*this); }
+    operator WeakPointer<T, ThreadSafe>() const { return WeakPointer<T, ThreadSafe>(*this); }
 
 private:
     template <typename OtherT, bool OtherThreadSafe> friend class WeakPointer;
@@ -190,20 +211,20 @@ public:
             Platform::Get().OnFatalError(u"SharedReference cannot be initialized with nullptr");
             return;
         }
-        this->managedObject = object;
+        this->SetManagedObject(object);
         this->template IncreaseCounter<true>();
     }
 
     template <typename OtherT, bool OtherThreadSafe>
     explicit SharedReference(const SharedPointer<OtherT, OtherThreadSafe>& sharedPtr)
         : ReferenceCountedPointerBase<T, ThreadSafe>(sharedPtr.Counter) {
-        this->managedObject = sharedPtr.Get();
+        this->SetManagedObject(sharedPtr.Get());
         this->template IncreaseCounter<true>();
     }
     template <typename OtherT, bool OtherThreadSafe>
     explicit SharedReference(const SharedReference<OtherT, OtherThreadSafe>& sharedRef)
         : ReferenceCountedPointerBase<T, ThreadSafe>(sharedRef.Counter) {
-        this->managedObject = sharedRef.Get();
+        this->SetManagedObject(sharedRef.Get());
         this->template IncreaseCounter<true>();
     }
     ~SharedReference() override { this->template DecreaseCounter<true>(); }
@@ -213,14 +234,14 @@ public:
     SharedReference operator=(const SharedPointer<OtherT, OtherThreadSafe>& sharedPtr) {
         this->template SetCounter<true>(sharedPtr.Counter);
         this->template IncreaseCounter<true>();
-        this->managedObject = sharedPtr.Get();
+        this->SetManagedObject(sharedPtr.Get());
         return *this;
     }
     template <typename OtherT, bool OtherThreadSafe>
     SharedReference operator=(const SharedReference<OtherT, OtherThreadSafe>& sharedRef) {
         this->template SetCounter<true>(sharedRef.Counter);
         this->template IncreaseCounter<true>();
-        this->managedObject = sharedRef.Get();
+        this->SetManagedObject(sharedRef.Get());
         return *this;
     }
 
@@ -230,13 +251,16 @@ public:
             return;
         }
         this->template SetCounter<true>(new ReferenceCounter<ThreadSafe>());
-        this->managedObject = object;
+        this->SetManagedObject(object);
         return *this;
     }
     bool operator==(const SharedReference& other) const { return this->managedObject == other.managedObject; }
     bool operator!=(const SharedReference& other) const { return !((*this) == other); }
     bool operator==(const T* other) const { return this->managedObject == other; }
     bool operator!=(const T* other) const { return !((*this) == other); }
+
+    operator SharedPointer<T, ThreadSafe>() const { return SharedPointer<T, ThreadSafe>(*this); }
+    operator WeakPointer<T, ThreadSafe>() const { return WeakPointer<T, ThreadSafe>(*this); }
 };
 
 template <typename T, bool ThreadSafe> class WeakPointer final : public ReferenceCountedPointerBase<T, ThreadSafe> {
@@ -330,6 +354,30 @@ public:
 private:
     T* ptr;
 };
+
+template <typename T> struct EnableSharedFromThis {
+public:
+    template <typename U> SharedPointer<U> SharedFromThis(const U* derived) const {
+        if (weakThis.Get() == nullptr) {
+            Platform::Get().OnFatalError(u"EnableSharedFromThis: Object is not managed by SharedPointer.");
+            return SharedPointer<U>();
+        }
+        return weakThis.Lock().template ToSharedPointer<U>();
+    }
+
+    SharedReference<T> AsShared() const {
+        if (weakThis.Get() == nullptr) {
+            Platform::Get().OnFatalError(u"EnableSharedFromThis: Object is not managed by SharedPointer.");
+            return SharedReference<T>();
+        }
+        return weakThis.Lock().template ToSharedReference<T>();
+    }
+
+private:
+    template <typename, bool> friend class ReferenceCountedPointerBase;
+    WeakPointer<T> weakThis;
+};
+
 } // namespace Edvar::Memory
 
 namespace Edvar {
@@ -350,5 +398,32 @@ UniquePointer<T> MakeUnique(ArgsT&&... args)
 
 template <typename T, typename... ArgsT> SharedPointer<T> MakeShared(ArgsT&&... args) {
     return SharedPointer<T>(new T(std::forward<ArgsT>(args)...));
+}
+
+template <typename FromT, typename ToT>
+SharedPointer<ToT> StaticCastSharedPointer(const SharedPointer<FromT>& fromPtr) {
+    ToT* castedPtr = static_cast<ToT*>(fromPtr.Get());
+    SharedPointer<ToT> toPtr(castedPtr);
+    toPtr.SetCounter(fromPtr.Counter);
+    toPtr.template IncreaseCounter<true>();
+    return toPtr;
+}
+
+template <typename FromT, typename ToT>
+SharedReference<ToT> StaticCastSharedReference(const SharedReference<FromT>& fromRef) {
+    ToT* castedPtr = static_cast<ToT*>(fromRef.Get());
+    SharedReference<ToT> toRef(castedPtr);
+    toRef.SetCounter(fromRef.Counter);
+    toRef.template IncreaseCounter<true>();
+    return toRef;
+}
+
+template <typename FromT, typename ToT> WeakPointer<ToT> StaticCastWeakPointer(const WeakPointer<FromT>& fromPtr) {
+    ToT* castedPtr = static_cast<ToT*>(fromPtr.Get());
+    WeakPointer<ToT> toPtr;
+    toPtr.managedObject = castedPtr;
+    toPtr.SetCounter(fromPtr.Counter);
+    toPtr.template IncreaseCounter<false>();
+    return toPtr;
 }
 } // namespace Edvar

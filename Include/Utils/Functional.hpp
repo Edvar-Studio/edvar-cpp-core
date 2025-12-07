@@ -164,38 +164,35 @@ public:
     Delegate() = default;
     ~Delegate() { delete binding; }
 
-    bool IsValid() const { return binding != nullptr; }
-
-    void InvokeIfBound(RetT& returnValue, ArgsT&&... args) const {
-        if (binding != nullptr) {
-            returnValue = binding->Invoke(std::forward<ArgsT>(args)...);
-        }
-    }
+    bool IsBound() const { return binding != nullptr; }
 
     RetT Invoke(ArgsT&&... args) const {
         if (binding != nullptr) {
             return binding->Invoke(std::forward<ArgsT>(args)...);
         }
-        Platform::Get().OnFatalError(
-            Utils::CStrings::CreatePrintFString(u"Delegate: Attempted to invoke an invalid delegate."));
+        Platform::Get().OnFatalError(u"Delegate: Attempted to invoke an invalid delegate.");
         // Make sure compile is happy about this.
         return RetT();
     }
 
-    template <typename... BoundArgumentsT> void BindStatic(RetT (*func)(ArgsT...), BoundArgumentsT&&... boundArgs) {
+    template <typename... BoundArgumentsT>
+    void BindStatic(RetT (*func)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
+                    BoundArgumentsT&&... boundArgs) {
         delete binding;
         binding = new FreeCallableImpl<decltype(func)>(func, std::forward<BoundArgumentsT>(boundArgs)...);
     }
 
     template <typename ObjectT, typename... BoundArgumentsT>
-    void BindRaw(ObjectT* object, RetT (ObjectT::*method)(ArgsT...), BoundArgumentsT&&... boundArgs) {
+    void BindRaw(ObjectT* object, RetT (ObjectT::*method)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
+                 BoundArgumentsT&&... boundArgs) {
         delete binding;
         binding = new RawCallableImpl<ObjectT, decltype(method), BoundArgumentsT...>(
             object, method, std::forward<BoundArgumentsT>(boundArgs)...);
     }
 
     template <typename ObjectT, typename... BoundArgumentsT>
-    void BindShared(const SharedPointer<ObjectT>& object, RetT (ObjectT::*method)(ArgsT...),
+    void BindShared(const SharedPointer<ObjectT>& object,
+                    RetT (ObjectT::*method)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
                     BoundArgumentsT&&... boundArgs) {
         delete binding;
         binding = new SharedCallableImpl<ObjectT, decltype(method), BoundArgumentsT...>(
@@ -203,7 +200,8 @@ public:
     }
 
     template <typename ObjectT, typename... BoundArgumentsT>
-    void BindWeak(const WeakPointer<ObjectT>& object, RetT (ObjectT::*method)(ArgsT...),
+    void BindWeak(const WeakPointer<ObjectT>& object,
+                  RetT (ObjectT::*method)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
                   BoundArgumentsT&&... boundArgs) {
         delete binding;
         binding = new WeakCallableImpl<ObjectT, decltype(method), BoundArgumentsT...>(
@@ -214,5 +212,91 @@ public:
         delete binding;
         binding = nullptr;
     }
+};
+
+typedef int64_t DelegateHandle;
+
+template <typename Signature> struct MultiDelegate;
+template <typename... ArgsT> struct MultiDelegate<void(ArgsT...)> {
+    using ArgsTuple = std::tuple<ArgsT...>;
+
+    DelegateHandle AddDelegate(const Delegate<void(ArgsT...)>& delegate) {
+        DelegateData data;
+        data.DelegeteInstance = delegate;
+        data.Handle = NextHandle++;
+        Delegates.Push(data);
+        return data.Handle;
+    }
+
+    template <typename... BoundArgumentsT>
+    DelegateHandle AddStatic(void (*func)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
+                             BoundArgumentsT&&... boundArgs) {
+        Delegate<void(ArgsT...)> delegate;
+        delegate.BindStatic(func, std::forward<BoundArgumentsT>(boundArgs)...);
+        return AddDelegate(delegate);
+    }
+
+    template <typename ObjectT, typename... BoundArgumentsT>
+    DelegateHandle AddRaw(ObjectT* object, void (*method)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
+                          BoundArgumentsT&&... boundArgs) {
+        Delegate<void(ArgsT...)> delegate;
+        delegate.BindRaw(object, method, std::forward<BoundArgumentsT>(boundArgs)...);
+        return AddDelegate(delegate);
+    }
+
+    template <typename ObjectT, typename... BoundArgumentsT>
+    DelegateHandle AddShared(const SharedPointer<ObjectT>& object,
+                             void (ObjectT::*method)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
+                             BoundArgumentsT&&... boundArgs) {
+        Delegate<void(ArgsT...)> delegate;
+        delegate.template BindShared<ObjectT, BoundArgumentsT...>(object, method,
+                                                                  std::forward<BoundArgumentsT>(boundArgs)...);
+        return AddDelegate(delegate);
+    }
+
+    template <typename ObjectT, typename... BoundArgumentsT>
+    DelegateHandle AddShared(const Memory::EnableSharedFromThis<ObjectT>* object,
+                             void (ObjectT::*method)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
+                             BoundArgumentsT&&... boundArgs) {
+        Delegate<void(ArgsT...)> delegate;
+        delegate.template BindShared<ObjectT, BoundArgumentsT...>(object->AsShared(), method,
+                                                                  std::forward<BoundArgumentsT>(boundArgs)...);
+        return AddDelegate(delegate);
+    }
+
+    template <typename ObjectT, typename... BoundArgumentsT>
+    DelegateHandle AddWeak(const WeakPointer<ObjectT>& object,
+                           void (ObjectT::*method)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
+                           BoundArgumentsT&&... boundArgs) {
+        Delegate<void(ArgsT...)> delegate;
+        delegate.template BindWeak<ObjectT, BoundArgumentsT...>(object, method,
+                                                                std::forward<BoundArgumentsT>(boundArgs)...);
+        return AddDelegate(delegate);
+    }
+
+    void RemoveDelegate(DelegateHandle handle) {
+        for (int32_t i = 0; i < Delegates.Length(); ++i) {
+            if (Delegates[i].Handle == handle) {
+                Delegates.RemoveAt(i);
+                return;
+            }
+        }
+    }
+
+    void Clear() { Delegates.Resize(0); }
+
+    void Broadcast(ArgsT... args) const {
+        for (int32_t i = 0; i < Delegates.Length(); ++i) {
+            Delegates[i].DelegeteInstance.Invoke(std::forward<ArgsT>(args)...);
+        }
+    }
+
+private:
+    struct DelegateData {
+        Delegate<void(ArgsT...)> DelegateInstance;
+        DelegateHandle Handle;
+    };
+    Containers::List<DelegateData> Delegates;
+    DelegateHandle NextHandle = 1;
 };
 } // namespace Edvar::Utils

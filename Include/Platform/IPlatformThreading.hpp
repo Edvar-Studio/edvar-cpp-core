@@ -55,6 +55,9 @@ public:
 
     virtual ~IThreadImplementation() = default;
 
+    Utils::MultiDelegate<void(int returnValue)> PreThreadExit;
+    Utils::MultiDelegate<void(CrashReason reason, String reasonMessage, IThreadImplementation& thread)> OnThreadCrashed;
+
 protected:
     bool ShouldKill = false;
     virtual void ForceKill() = 0;
