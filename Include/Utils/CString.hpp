@@ -71,6 +71,9 @@ template <typename ToT, typename FromT> inline ToT* CreateConvertedString(const 
 int32_t ToLower(char16_t* inString, char16_t* outString, int32_t bufferLength, const I18N::Locale* inLocale = nullptr);
 int32_t ToUpper(char16_t* inString, char16_t* outString, int32_t bufferLength, const I18N::Locale* inLocale = nullptr);
 
+uint64_t StringToUInt64(const char16_t* str, int32_t base = 10);
+int64_t StringToInt64(const char16_t* str, int32_t base = 10);
+
 bool IsWhitespace(char c);
 bool IsWhitespace(char8_t c);
 bool IsWhitespace(wchar_t c);

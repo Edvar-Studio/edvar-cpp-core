@@ -445,8 +445,7 @@ int32_t NumberToString(double value, char16_t* buffer, int32_t bufferLength, int
     icu::DecimalFormatSymbols dfs(*static_cast<const icu::Locale*>(locale.GetData()), errorCode);
     if (U_SUCCESS(errorCode)) {
         decimalSeparator = dfs.getSymbol(icu::DecimalFormatSymbols::kDecimalSeparatorSymbol).getTerminatedBuffer();
-        groupingSeparator =
-            dfs.getSymbol(icu::DecimalFormatSymbols::kGroupingSeparatorSymbol).getTerminatedBuffer();
+        groupingSeparator = dfs.getSymbol(icu::DecimalFormatSymbols::kGroupingSeparatorSymbol).getTerminatedBuffer();
     }
 
     // Format the number
@@ -495,8 +494,8 @@ int32_t NumberToString(double value, char16_t* buffer, int32_t bufferLength, int
     if (integralDigits < formattingRule.MinimumIntegralDigits) {
         // Insert leading zeros
         int32_t zerosToAdd = formattingRule.MinimumIntegralDigits - integralDigits;
-        for (int32_t i = tempPos - integralDigits - (isNegative || formattingRule.AlwaysSign ? 1 : 0);
-             i < zerosToAdd; ++i) {
+        for (int32_t i = tempPos - integralDigits - (isNegative || formattingRule.AlwaysSign ? 1 : 0); i < zerosToAdd;
+             ++i) {
             // Shift existing content
             for (int32_t j = tempPos; j > (isNegative || formattingRule.AlwaysSign ? 1 : 0); --j) {
                 tempBuffer[j] = tempBuffer[j - 1];
@@ -555,35 +554,35 @@ int32_t NumberToString(double value, char16_t* buffer, int32_t bufferLength, int
         // Apply rounding mode
         int64_t fractionalInt = 0;
         switch (formattingRule.RoundingMode) {
-            case NumberRoundingMode::HalfToEven: {
-                double rounded = std::round(roundedFractional);
-                if (rounded == std::floor(roundedFractional) + 0.5) {
-                    // Banker's rounding: round to nearest even
-                    int64_t lower = static_cast<int64_t>(std::floor(roundedFractional));
-                    fractionalInt = (lower % 2 == 0) ? lower : lower + 1;
-                } else {
-                    fractionalInt = static_cast<int64_t>(std::round(roundedFractional));
-                }
-                break;
+        case NumberRoundingMode::HalfToEven: {
+            double rounded = std::round(roundedFractional);
+            if (rounded == std::floor(roundedFractional) + 0.5) {
+                // Banker's rounding: round to nearest even
+                int64_t lower = static_cast<int64_t>(std::floor(roundedFractional));
+                fractionalInt = (lower % 2 == 0) ? lower : lower + 1;
+            } else {
+                fractionalInt = static_cast<int64_t>(std::round(roundedFractional));
             }
-            case NumberRoundingMode::HalfFromZero:
-                fractionalInt = static_cast<int64_t>(std::floor(roundedFractional + 0.5));
-                break;
-            case NumberRoundingMode::HalfToZero:
-                fractionalInt = static_cast<int64_t>(std::trunc(roundedFractional));
-                break;
-            case NumberRoundingMode::FromZero:
-                fractionalInt = static_cast<int64_t>(std::ceil(std::abs(roundedFractional)));
-                break;
-            case NumberRoundingMode::ToZero:
-                fractionalInt = static_cast<int64_t>(std::trunc(roundedFractional));
-                break;
-            case NumberRoundingMode::ToNegativeInfinity:
-                fractionalInt = static_cast<int64_t>(std::floor(roundedFractional));
-                break;
-            case NumberRoundingMode::ToPositiveInfinity:
-                fractionalInt = static_cast<int64_t>(std::ceil(roundedFractional));
-                break;
+            break;
+        }
+        case NumberRoundingMode::HalfFromZero:
+            fractionalInt = static_cast<int64_t>(std::floor(roundedFractional + 0.5));
+            break;
+        case NumberRoundingMode::HalfToZero:
+            fractionalInt = static_cast<int64_t>(std::trunc(roundedFractional));
+            break;
+        case NumberRoundingMode::FromZero:
+            fractionalInt = static_cast<int64_t>(std::ceil(std::abs(roundedFractional)));
+            break;
+        case NumberRoundingMode::ToZero:
+            fractionalInt = static_cast<int64_t>(std::trunc(roundedFractional));
+            break;
+        case NumberRoundingMode::ToNegativeInfinity:
+            fractionalInt = static_cast<int64_t>(std::floor(roundedFractional));
+            break;
+        case NumberRoundingMode::ToPositiveInfinity:
+            fractionalInt = static_cast<int64_t>(std::ceil(roundedFractional));
+            break;
         }
 
         // Convert fractional part to string with leading zeros
@@ -591,7 +590,8 @@ int32_t NumberToString(double value, char16_t* buffer, int32_t bufferLength, int
         int32_t fracLen = 0;
 
         for (int32_t i = 0; i < fractionalDigits; ++i) {
-            fractionalBuffer[fracLen++] = u'0' + ((fractionalInt / static_cast<int64_t>(std::pow(10.0, fractionalDigits - i - 1))) % 10);
+            fractionalBuffer[fracLen++] =
+                u'0' + ((fractionalInt / static_cast<int64_t>(std::pow(10.0, fractionalDigits - i - 1))) % 10);
         }
 
         // Apply minimum fractional digits
@@ -648,5 +648,90 @@ int32_t NumberToString(double value, char16_t* buffer, int32_t bufferLength, int
     buffer[tempPos] = u'\0';
 
     return tempPos;
+}
+uint64_t StringToUInt64(const char16_t* str, int32_t base) {
+    if (base < 2 || base > 36) {
+        return 0; // Invalid base
+    }
+
+    uint64_t result = 0;
+    int32_t index = 0;
+
+    // Skip leading whitespace
+    while (IsWhitespace(str[index])) {
+        ++index;
+    }
+
+    // Process each character
+    while (str[index] != u'\0') {
+        char16_t ch = str[index];
+        int32_t digitValue = -1;
+
+        if (ch >= u'0' && ch <= u'9') {
+            digitValue = ch - u'0';
+        } else if (ch >= u'A' && ch <= u'Z') {
+            digitValue = ch - u'A' + 10;
+        } else if (ch >= u'a' && ch <= u'z') {
+            digitValue = ch - u'a' + 10;
+        } else {
+            break; // Invalid character
+        }
+
+        if (digitValue < 0 || digitValue >= base) {
+            break; // Invalid digit for the base
+        }
+
+        result = result * base + static_cast<uint64_t>(digitValue);
+        ++index;
+    }
+
+    return result;
+}
+int64_t StringToInt64(const char16_t* str, int32_t base) {
+    if (base < 2 || base > 36) {
+        return 0; // Invalid base
+    }
+
+    int64_t result = 0;
+    int32_t index = 0;
+    bool isNegative = false;
+
+    // Skip leading whitespace
+    while (IsWhitespace(str[index])) {
+        ++index;
+    }
+
+    // Check for sign
+    if (str[index] == u'-') {
+        isNegative = true;
+        ++index;
+    } else if (str[index] == u'+') {
+        ++index;
+    }
+
+    // Process each character
+    while (str[index] != u'\0') {
+        char16_t ch = str[index];
+        int32_t digitValue = -1;
+
+        if (ch >= u'0' && ch <= u'9') {
+            digitValue = ch - u'0';
+        } else if (ch >= u'A' && ch <= u'Z') {
+            digitValue = ch - u'A' + 10;
+        } else if (ch >= u'a' && ch <= u'z') {
+            digitValue = ch - u'a' + 10;
+        } else {
+            break; // Invalid character
+        }
+
+        if (digitValue < 0 || digitValue >= base) {
+            break; // Invalid digit for the base
+        }
+
+        result = result * base + static_cast<int64_t>(digitValue);
+        ++index;
+    }
+
+    return isNegative ? -result : result;
 }
 } // namespace Edvar::Utils::CStrings

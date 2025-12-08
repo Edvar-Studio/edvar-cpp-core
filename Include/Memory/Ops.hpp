@@ -24,4 +24,15 @@ template <typename T> inline void SetMemory(T* Ptr, uint8_t Value, uint64_t Coun
     }
 }
 
+template <typename T> inline int32_t CompareMemory(const T* Ptr1, const T* Ptr2, uint64_t Count) {
+    const auto* BytePtr1 = reinterpret_cast<const unsigned char*>(Ptr1);
+    const auto* BytePtr2 = reinterpret_cast<const unsigned char*>(Ptr2);
+    for (uint64_t i = 0; i < Count * sizeof(T); ++i) {
+        if (BytePtr1[i] != BytePtr2[i]) {
+            return static_cast<int32_t>(BytePtr1[i]) - static_cast<int32_t>(BytePtr2[i]);
+        }
+    }
+    return 0;
+}
+
 } // namespace Edvar::Memory

@@ -198,6 +198,14 @@ public:
     operator SharedReference<T, ThreadSafe>() const { return SharedReference<T, ThreadSafe>(*this); }
     operator WeakPointer<T, ThreadSafe>() const { return WeakPointer<T, ThreadSafe>(*this); }
 
+    operator bool() const { return IsValid(); }
+
+    void Reset() {
+        this->template DecreaseCounter<true>();
+        this->Counter = nullptr;
+        this->SetManagedObject(nullptr);
+    }
+
 private:
     template <typename OtherT, bool OtherThreadSafe> friend class WeakPointer;
 };

@@ -11,6 +11,8 @@ class WindowsPlatform final : public IPlatform{
         return "Windows";
     }
     [[nodiscard]] IPlatformThreading& GetThreading() const override;
+    [[nodiscard]] IPlatformWindowing& GetWindowing() const override;
+    [[nodiscard]] IPlatformInput& GetInput() const override;
 };
 }
 

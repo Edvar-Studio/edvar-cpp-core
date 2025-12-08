@@ -17,6 +17,8 @@ enum class CrashReason : int32_t {
 };
 
 class IPlatformThreading;
+class IPlatformWindowing;
+class IPlatformInput;
 class IPlatform {
 public:
     virtual ~IPlatform() = default;
@@ -26,6 +28,8 @@ public:
 
     [[nodiscard]] virtual Memory::IMemoryAllocator* GetAllocator() const;
     [[nodiscard]] virtual IPlatformThreading& GetThreading() const = 0;
+    [[nodiscard]] virtual IPlatformWindowing& GetWindowing() const = 0;
+    [[nodiscard]] virtual IPlatformInput& GetInput() const = 0;
 
     [[nodiscard]] virtual const char* GetName() const = 0;
 };

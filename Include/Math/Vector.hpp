@@ -381,6 +381,7 @@ Vector2<T> operator*(T scalar, const Vector2<T>& vec);
 
 using Vector2f = Vector2<float>;
 using Vector2d = Vector2<double>;
+using Vector2i = Vector2<int32_t>;
 
 using Vector3f = Vector3<float>;
 using Vector3d = Vector3<double>;

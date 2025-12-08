@@ -469,8 +469,21 @@ Matrix4x4<T> Matrix4x4<T>::RotationAxis(const Vector3<T>& axis, T angleRadians) 
 template <typename T>
     requires(std::is_arithmetic_v<T> && SIMD::IsSIMDTypeSupported<T>)
 Matrix4x4<T> Matrix4x4<T>::RotationQuaternion(const Quaternion& quat) {
-    // TODO: Implement when Quaternion is available
-    return Identity;
+    // Convert quaternion to 4x4 rotation matrix
+    Matrix4x4<float> rotMatF = quat.ToRotationMatrix4x4();
+    
+    // Convert to target type if needed
+    if constexpr (std::is_same_v<T, float>) {
+        return rotMatF;
+    } else {
+        Matrix4x4<T> result;
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                result.M[i][j] = static_cast<T>(rotMatF.M[i][j]);
+            }
+        }
+        return result;
+    }
 }
 
 template <typename T>
@@ -492,9 +505,12 @@ Matrix4x4<T> Matrix4x4<T>::Scale(T uniformScale) {
 template <typename T>
     requires(std::is_arithmetic_v<T> && SIMD::IsSIMDTypeSupported<T>)
 Matrix4x4<T> Matrix4x4<T>::TRS(const Vector3<T>& translation, const Quaternion& rotation, const Vector3<T>& scale) {
-    // TODO: Implement when Quaternion is available
-    // For now, just combine translation and scale
-    return Translation(translation) * Scale(scale);
+    // Compose transformation matrix: T * R * S
+    Matrix4x4<T> scaleMat = Scale(scale);
+    Matrix4x4<T> rotMat = RotationQuaternion(rotation);
+    Matrix4x4<T> transMat = Translation(translation);
+    
+    return transMat * rotMat * scaleMat;
 }
 
 template <typename T>
@@ -615,10 +631,49 @@ Matrix4x4<T> Matrix4x4<T>::OrthographicOffCenter(T left, T right, T bottom, T to
 template <typename T>
     requires(std::is_arithmetic_v<T> && SIMD::IsSIMDTypeSupported<T>)
 bool Matrix4x4<T>::Decompose(Vector3<T>& outTranslation, Quaternion& outRotation, Vector3<T>& outScale) const {
-    // TODO: Implement when Quaternion is available
+    // Extract translation
     outTranslation = GetTranslation();
-    outScale = ExtractScale();
-    return false; // Not fully implemented yet
+    
+    // Extract scale from basis vectors
+    Vector3<T> scaleX(M[0][0], M[1][0], M[2][0]);
+    Vector3<T> scaleY(M[0][1], M[1][1], M[2][1]);
+    Vector3<T> scaleZ(M[0][2], M[1][2], M[2][2]);
+    
+    outScale.X = scaleX.Length();
+    outScale.Y = scaleY.Length();
+    outScale.Z = scaleZ.Length();
+    
+    // Check for invalid scale
+    if (outScale.X < static_cast<T>(VERY_SMALL_NUMBER) ||
+        outScale.Y < static_cast<T>(VERY_SMALL_NUMBER) ||
+        outScale.Z < static_cast<T>(VERY_SMALL_NUMBER)) {
+        return false;
+    }
+    
+    // Handle negative scale (determinant check)
+    T det = Determinant();
+    if (det < static_cast<T>(0)) {
+        outScale.X = -outScale.X;
+    }
+    
+    // Extract rotation by removing scale
+    Matrix3x3<float> rotMat;
+    rotMat(0, 0) = static_cast<float>(M[0][0] / outScale.X);
+    rotMat(1, 0) = static_cast<float>(M[1][0] / outScale.X);
+    rotMat(2, 0) = static_cast<float>(M[2][0] / outScale.X);
+    
+    rotMat(0, 1) = static_cast<float>(M[0][1] / outScale.Y);
+    rotMat(1, 1) = static_cast<float>(M[1][1] / outScale.Y);
+    rotMat(2, 1) = static_cast<float>(M[2][1] / outScale.Y);
+    
+    rotMat(0, 2) = static_cast<float>(M[0][2] / outScale.Z);
+    rotMat(1, 2) = static_cast<float>(M[1][2] / outScale.Z);
+    rotMat(2, 2) = static_cast<float>(M[2][2] / outScale.Z);
+    
+    // Convert rotation matrix to quaternion
+    outRotation = Quaternion::FromRotationMatrix(rotMat);
+    
+    return true;
 }
 
 template <typename T>

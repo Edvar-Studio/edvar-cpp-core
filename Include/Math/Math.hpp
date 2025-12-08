@@ -1,5 +1,6 @@
 #pragma once
 
+#include "EdvarCore.hpp"
 namespace Edvar::Math {
 static constexpr double PI = 3.14159265358979323846;
 static constexpr double TWO_PI = 2.0 * PI;
@@ -193,6 +194,10 @@ EDVAR_CPP_CORE_API bool IsInfinite(float value);
 
 EDVAR_CPP_CORE_API bool IsNaN(double value);
 EDVAR_CPP_CORE_API bool IsNaN(float value);
+
+template <typename T> EDVAR_CPP_CORE_FORCE_INLINE T CopySign(const T& magnitude, const T& signSource) {
+    return (signSource >= static_cast<T>(0)) ? Abs(magnitude) : -Abs(magnitude);
+}
 
 template <typename T> EDVAR_CPP_CORE_FORCE_INLINE T Round(const T& value) {
     return value < 0 ? static_cast<T>(value - 0.5) : static_cast<T>(value + 0.5);

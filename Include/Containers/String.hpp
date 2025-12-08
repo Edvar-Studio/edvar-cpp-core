@@ -198,6 +198,31 @@ template <typename CharT> struct StringBase {
         return count;
     }
 
+    bool StartsWith(const StringBase& prefix) const {
+        if (prefix.Length() > Length()) {
+            return false;
+        }
+        for (int32_t i = 0; i < prefix.Length(); i++) {
+            if (Data()[i] != prefix.Data()[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool EndsWith(const StringBase& suffix) const {
+        if (suffix.Length() > Length()) {
+            return false;
+        }
+        int32_t startIndex = Length() - suffix.Length();
+        for (int32_t i = 0; i < suffix.Length(); i++) {
+            if (Data()[startIndex + i] != suffix.Data()[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     bool IsEmpty() const { return Length() == 0 || IsWhitespace(); }
 
     bool IsWhitespace() const {
