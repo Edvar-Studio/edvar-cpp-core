@@ -4,37 +4,37 @@ class Locale;
 }
 namespace Edvar::Utils::CStrings {
 int32_t EDVAR_CPP_CORE_API Length(const char16_t* buffer);
-int32_t Length(const wchar_t* buffer);
-int32_t Length(const char* buffer);
+int32_t EDVAR_CPP_CORE_API Length(const wchar_t* buffer);
+int32_t EDVAR_CPP_CORE_API Length(const char* buffer);
 
-int32_t SPrintF(char16_t* buffer, uint32_t bufferLength, const char16_t* format, ...);
-char16_t* CreatePrintFString(const char16_t* format, ...);
-int32_t FPrintF(const void* file, const char16_t* format, ...);
+int32_t EDVAR_CPP_CORE_API SPrintF(char16_t* buffer, uint32_t bufferLength, const char16_t* format, ...);
+char16_t* EDVAR_CPP_CORE_API CreatePrintFString(const char16_t* format, ...);
+int32_t EDVAR_CPP_CORE_API FPrintF(const void* file, const char16_t* format, ...);
 
-int32_t ToCharString(const wchar_t* inString, char* buffer, int32_t bufferLength);
-int32_t ToCharString(const char8_t* inString, char* buffer, int32_t bufferLength);
-int32_t ToCharString(const char16_t* inString, char* buffer, int32_t bufferLength);
-int32_t ToCharString(const char32_t* inString, char* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToCharString(const wchar_t* inString, char* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToCharString(const char8_t* inString, char* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToCharString(const char16_t* inString, char* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToCharString(const char32_t* inString, char* buffer, int32_t bufferLength);
 
-int32_t ToWCharString(const char* inString, wchar_t* buffer, int32_t bufferLength);
-int32_t ToWCharString(const char8_t* inString, wchar_t* buffer, int32_t bufferLength);
-int32_t ToWCharString(const char16_t* inString, wchar_t* buffer, int32_t bufferLength);
-int32_t ToWCharString(const char32_t* inString, wchar_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToWCharString(const char* inString, wchar_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToWCharString(const char8_t* inString, wchar_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToWCharString(const char16_t* inString, wchar_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToWCharString(const char32_t* inString, wchar_t* buffer, int32_t bufferLength);
 
-int32_t ToUtf8String(const char* inString, char8_t* buffer, int32_t bufferLength);
-int32_t ToUtf8String(const wchar_t* inString, char8_t* buffer, int32_t bufferLength);
-int32_t ToUtf8String(const char16_t* inString, char8_t* buffer, int32_t bufferLength);
-int32_t ToUtf8String(const char32_t* inString, char8_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToUtf8String(const char* inString, char8_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToUtf8String(const wchar_t* inString, char8_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToUtf8String(const char16_t* inString, char8_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToUtf8String(const char32_t* inString, char8_t* buffer, int32_t bufferLength);
 
-int32_t ToUtf16String(const char* inString, char16_t* buffer, int32_t bufferLength);
-int32_t ToUtf16String(const wchar_t* inString, char16_t* buffer, int32_t bufferLength);
-int32_t ToUtf16String(const char8_t* inString, char16_t* buffer, int32_t bufferLength);
-int32_t ToUtf16String(const char32_t* inString, char16_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToUtf16String(const char* inString, char16_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToUtf16String(const wchar_t* inString, char16_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToUtf16String(const char8_t* inString, char16_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToUtf16String(const char32_t* inString, char16_t* buffer, int32_t bufferLength);
 
-int32_t ToUtf32String(const char* inString, char32_t* buffer, int32_t bufferLength);
-int32_t ToUtf32String(const wchar_t* inString, char32_t* buffer, int32_t bufferLength);
-int32_t ToUtf32String(const char8_t* inString, char32_t* buffer, int32_t bufferLength);
-int32_t ToUtf32String(const char16_t* inString, char32_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToUtf32String(const char* inString, char32_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToUtf32String(const wchar_t* inString, char32_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToUtf32String(const char8_t* inString, char32_t* buffer, int32_t bufferLength);
+int32_t EDVAR_CPP_CORE_API ToUtf32String(const char16_t* inString, char32_t* buffer, int32_t bufferLength);
 
 template <typename FromT, typename ToT>
 int32_t ConvertString(const FromT* inString, ToT* buffer, const int32_t bufferLength) {
@@ -68,17 +68,19 @@ template <typename ToT, typename FromT> inline ToT* CreateConvertedString(const 
     return buffer;
 }
 
-int32_t ToLower(char16_t* inString, char16_t* outString, int32_t bufferLength, const I18N::Locale* inLocale = nullptr);
-int32_t ToUpper(char16_t* inString, char16_t* outString, int32_t bufferLength, const I18N::Locale* inLocale = nullptr);
+int32_t EDVAR_CPP_CORE_API ToLower(char16_t* inString, char16_t* outString, int32_t bufferLength,
+                                   const I18N::Locale* inLocale = nullptr);
+int32_t EDVAR_CPP_CORE_API ToUpper(char16_t* inString, char16_t* outString, int32_t bufferLength,
+                                   const I18N::Locale* inLocale = nullptr);
 
-uint64_t StringToUInt64(const char16_t* str, int32_t base = 10);
-int64_t StringToInt64(const char16_t* str, int32_t base = 10);
+uint64_t EDVAR_CPP_CORE_API StringToUInt64(const char16_t* str, int32_t base = 10);
+int64_t EDVAR_CPP_CORE_API StringToInt64(const char16_t* str, int32_t base = 10);
 
-bool IsWhitespace(char c);
-bool IsWhitespace(char8_t c);
-bool IsWhitespace(wchar_t c);
-bool IsWhitespace(char16_t c);
-bool IsWhitespace(char32_t c);
+bool EDVAR_CPP_CORE_API IsWhitespace(char c);
+bool EDVAR_CPP_CORE_API IsWhitespace(char8_t c);
+bool EDVAR_CPP_CORE_API IsWhitespace(wchar_t c);
+bool EDVAR_CPP_CORE_API IsWhitespace(char16_t c);
+bool EDVAR_CPP_CORE_API IsWhitespace(char32_t c);
 enum class NumberRoundingMode : uint8_t {
     HalfToEven,
     HalfFromZero,
@@ -111,12 +113,12 @@ struct NumberFormattingRule {
     const I18N::Locale* Locale;
 };
 
-int32_t NumberToString(int64_t value, char16_t* buffer, int32_t bufferLength, int32_t base = 10,
+int32_t EDVAR_CPP_CORE_API NumberToString(int64_t value, char16_t* buffer, int32_t bufferLength, int32_t base = 10,
                        NumberFormattingRule formattingRule = NumberFormattingRule());
-int32_t NumberToString(uint64_t value, char16_t* buffer, int32_t bufferLength, int32_t base = 10,
+int32_t EDVAR_CPP_CORE_API NumberToString(uint64_t value, char16_t* buffer, int32_t bufferLength, int32_t base = 10,
                        NumberFormattingRule formattingRule = NumberFormattingRule());
 
-int32_t NumberToString(double value, char16_t* buffer, int32_t bufferLength, int32_t precision = 15,
+int32_t EDVAR_CPP_CORE_API NumberToString(double value, char16_t* buffer, int32_t bufferLength, int32_t precision = 15,
                        NumberFormattingRule formattingRule = NumberFormattingRule());
 } // namespace Edvar::Utils::CStrings
 namespace Edvar {

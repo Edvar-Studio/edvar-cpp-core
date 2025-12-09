@@ -19,7 +19,7 @@ enum class CrashReason : int32_t {
 class IPlatformThreading;
 class IPlatformWindowing;
 class IPlatformInput;
-class IPlatform {
+class EDVAR_CPP_CORE_API IPlatform {
 public:
     virtual ~IPlatform() = default;
 
@@ -34,5 +34,5 @@ public:
     [[nodiscard]] virtual const char* GetName() const = 0;
 };
 
-IPlatform& Get();
+IPlatform& EDVAR_CPP_CORE_API Get();
 } // namespace Edvar::Platform
