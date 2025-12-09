@@ -25,7 +25,7 @@ class EdvarCppCore : ModuleBase
         this.Includes.Public.Add("Include");
         this.Includes.Private.Add("Source");
 
-        this.ForceIncludes.Private.Add("Source/ForceInclude.hpp");
+        this.ForceIncludes.Public.Add("Source/ForceInclude.hpp");
 
         this.Definitions.Private.Add($"EDVAR_CPP_CORE_MATH_ALLOW_SIMD={(this.AllowSimd ? 1 : 0)}");
         this.Definitions.Private.Add($"EDVAR_CPP_CORE_MATH_ALLOW_SIMD_AVX={(this.EnableAvx ? 1 : 0)}");
