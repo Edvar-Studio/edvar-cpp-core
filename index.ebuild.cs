@@ -18,9 +18,12 @@ class EdvarCppCore : ModuleBase
         this.CppStandard = CppStandards.Cpp20;
         this.SourceFiles = [.. ModuleUtilities.GetAllSourceFiles(this, "Source", "cpp")];
         this.Definitions.Private.Add("BUILDING_EDVAR_CPP_CORE=1");
-        if (context.RequestedOutput is "dynamic" or "shared")
+        if (context.RequestedOutput is "dynamic" or "shared" or "default")
         {
             this.Definitions.Public.Add("EDVAR_CPP_CORE_DYNAMIC=1");
+        }else{
+            this.Definitions.Public.Add("EDVAR_CPP_CORE_STATIC=1");
+            this.Type = ModuleType.StaticLibrary;
         }
         this.Includes.Public.Add("Include");
         this.Includes.Private.Add("Source");
