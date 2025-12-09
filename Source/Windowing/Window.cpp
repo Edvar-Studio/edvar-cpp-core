@@ -7,8 +7,12 @@
 namespace Edvar::Windowing {
 
 Window::Window(const WindowDescriptor& descriptor) {
+    Platform::Get().PrintMessageToDebugger(*String::PrintF(u"Sending request to create window: %s", *descriptor.Title));
     implementation = &Platform::Get().GetWindowing().CreateWindow(descriptor);
-
+    Platform::Get().PrintMessageToDebugger(
+        *String::PrintF(u"Window created with implementation handle: %p", implementation));
+    Platform::Get().PrintMessageToDebugger(
+        *String::PrintF(u"Now initializing rendering for window: %s", *descriptor.Title));
     InitializeRendering();
 }
 

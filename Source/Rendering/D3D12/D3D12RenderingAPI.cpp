@@ -10,6 +10,7 @@
 namespace Edvar::Rendering::D3D12 {
 IDXGIFactory2* GDXGIFactory = nullptr;
 D3D12RenderingAPI::D3D12RenderingAPI() : IRenderingAPI(u"DirectX 12") {
+    Platform::Get().PrintMessageToDebugger(*String::PrintF(u"D3D12: Initializing D3D12 Rendering API.\n"));
     if (GDXGIFactory == nullptr) [[unlikely]] {
         UINT createFactoryFlags = 0;
 #    ifdef _DEBUG
@@ -23,6 +24,7 @@ D3D12RenderingAPI::D3D12RenderingAPI() : IRenderingAPI(u"DirectX 12") {
 SharedPointer<IRenderDevice> D3D12RenderingAPI::CreatePrimaryRenderDevice() {
     IDXGIFactory6* requestedInterface;
     IDXGIAdapter* adapter = nullptr;
+    Platform::Get().PrintMessageToDebugger(u"Creating new primary render device.\n");
     if (SUCCEEDED(GDXGIFactory->QueryInterface(&requestedInterface))) {
         if (FAILED(requestedInterface->EnumAdapterByGpuPreference(0, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE,
                                                                   IID_PPV_ARGS(&adapter)))) {
