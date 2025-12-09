@@ -6,15 +6,7 @@ namespace Edvar::Platform {
 // Input Device Types
 // ============================================================================
 
-enum class InputDeviceType : int32_t {
-    Unknown,
-    Keyboard,
-    Mouse,
-    Gamepad,
-    Joystick,
-    TouchScreen,
-    Pen
-};
+enum class InputDeviceType : int32_t { Unknown, Keyboard, Mouse, Gamepad, Joystick, TouchScreen, Pen };
 
 // ============================================================================
 // Input Device Interface
@@ -45,6 +37,9 @@ public:
     // Device enumeration
     [[nodiscard]] virtual Containers::List<IInputDevice*> GetDevices() = 0;
     [[nodiscard]] virtual Containers::List<IInputDevice*> GetDevicesByType(InputDeviceType type) = 0;
+
+    virtual IInputDevice* GetKeyboard() = 0;
+    virtual IInputDevice* GetMouse() = 0;
 
     // Device events
     Utils::MultiDelegate<void(IInputDevice& device)> OnDeviceConnected;
@@ -94,7 +89,8 @@ public:
 
     // Mouse events
     Utils::MultiDelegate<void(IMouseDevice& device, int32_t button, bool isDown)> OnButton;
-    Utils::MultiDelegate<void(IMouseDevice& device, Math::Vector2<int32_t> position, Math::Vector2<int32_t> delta)> OnMove;
+    Utils::MultiDelegate<void(IMouseDevice& device, Math::Vector2<int32_t> position, Math::Vector2<int32_t> delta)>
+        OnMove;
     Utils::MultiDelegate<void(IMouseDevice& device, float delta)> OnWheel;
 };
 
@@ -118,11 +114,11 @@ public:
     struct GamepadState {
         // Buttons (bitfield)
         uint32_t Buttons;
-        
+
         // Analog sticks (-1.0 to 1.0)
         Math::Vector2<float> LeftStick;
         Math::Vector2<float> RightStick;
-        
+
         // Triggers (0.0 to 1.0)
         float LeftTrigger;
         float RightTrigger;
@@ -152,7 +148,7 @@ public:
     // Get current gamepad state
     [[nodiscard]] virtual GamepadState GetState() const = 0;
     [[nodiscard]] virtual bool IsButtonDown(GamepadButton button) const = 0;
-    
+
     // Haptic feedback
     virtual void SetVibration(float leftMotor, float rightMotor) = 0;
 

@@ -2,6 +2,8 @@
 #include "Platform/Windows/WindowsPlatformInput.hpp"
 #include "Windowing/Window.hpp"
 #define WIN32_LEAN_AND_MEAN
+#include "Rendering/RenderingCore.hpp"
+
 #include <windows.h>
 #include <windowsx.h>
 #include <shellscalingapi.h>
@@ -380,6 +382,13 @@ void WindowsWindow::HandleDPIChange(uint32_t newDPI, const void* suggestedRect) 
 
 void WindowsWindow::HandleMonitorChange() { UpdateMonitorInfo(); }
 
+bool WindowsWindow::OutputSupportsHDR() {
+    if (OwnerWrapper) {
+        UpdateMonitorInfo();
+        return Rendering::IRenderingAPI::GetActiveAPI()->DoesOutputSupportHDR(CurrentMonitor);
+    }
+    return false;
+}
 int64_t WindowsWindow::WindowProc(uint32_t msg, uint64_t wParam, int64_t lParam) {
     switch (msg) {
     case WM_CLOSE: {

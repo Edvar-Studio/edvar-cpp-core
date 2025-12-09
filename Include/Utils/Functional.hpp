@@ -26,14 +26,18 @@ public:
     Function() = default;
     ~Function() { delete callable; }
 
-    Function(const Function& other) : callable(other.callable != nullptr ? other.callable->Clone() : nullptr) {}
+    Function(const Function& other) {
+        if (other.callable != nullptr) {
+            callable = other.callable->Clone();
+        }
+    }
     Function(Function&& other) noexcept : callable(other.callable) { other.callable = nullptr; }
 
     Function(RetT (*funcPtr)(ArgsT...)) : callable(new CallableImpl(funcPtr)) {}
     template <typename FuncT>
-    Function(FuncT&& func) : callable(new CallableImpl<std::decay_t<FuncT>>(std::forward<FuncT>(func))) {}
+    explicit Function(FuncT&& func) : callable(new CallableImpl<std::decay_t<FuncT>>(std::forward<FuncT>(func))) {}
 
-    bool IsValid() const { return callable != nullptr; }
+    [[nodiscard]] bool IsValid() const { return callable != nullptr; }
     void Invoke(ArgsT... args) const {
         if (callable != nullptr) {
             callable->Invoke(std::forward<ArgsT>(args)...);
@@ -41,14 +45,14 @@ public:
     }
     operator bool() const { return IsValid(); }
     RetT operator()(ArgsT... args) const { return Invoke(std::forward<ArgsT>(args)...); }
-    Function const& operator=(const Function& other) {
+    Function& operator=(const Function& other) {
         if (this != &other) {
             delete callable;
             callable = other.callable != nullptr ? other.callable->Clone() : nullptr;
         }
         return *this;
     }
-    Function const& operator=(Function&& other) noexcept {
+    Function& operator=(Function&& other) noexcept {
         if (this != &other) {
             delete callable;
             callable = other.callable;
@@ -69,7 +73,7 @@ template <typename RetT, typename... ArgsT> struct FunctionRef<RetT(ArgsT...)> {
     }
     template <typename FuncT> FunctionRef(FuncT&&) = delete;
     RetT Invoke(ArgsT... args) const { return caller(obj, std::forward<ArgsT>(args)...); }
-    bool IsValid() const { return obj != nullptr && caller != nullptr; }
+    [[nodiscard]] bool IsValid() const { return obj != nullptr && caller != nullptr; }
     operator bool() const { return IsValid(); }
     RetT operator()(ArgsT... args) const { return Invoke(std::forward<ArgsT>(args)...); }
 
@@ -134,6 +138,7 @@ private:
                                                 std::forward<BoundArgumentsT>(boundVars)...);
                 });
             }
+            return RetT();
         }
         ICallable* Clone() const override { return new WeakCallableImpl<ObjT, MethodT>(object, method); }
     };
@@ -152,6 +157,7 @@ private:
                     return (object->*method)(std::forward<ArgsT>(args)..., std::forward<BoundArgumentsT>(boundVars)...);
                 });
             }
+            return RetT();
         }
         ICallable* Clone() const override {
             return new SharedCallableImpl<ObjT, MethodT, BoundArgumentsT...>(object, method, boundArguments);
@@ -164,7 +170,7 @@ public:
     Delegate() = default;
     ~Delegate() { delete binding; }
 
-    bool IsBound() const { return binding != nullptr; }
+    [[nodiscard]] bool IsBound() const { return binding != nullptr; }
 
     RetT Invoke(ArgsT&&... args) const {
         if (binding != nullptr) {
@@ -176,14 +182,13 @@ public:
     }
 
     template <typename... BoundArgumentsT>
-    void BindStatic(RetT (*func)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
-                    BoundArgumentsT&&... boundArgs) {
+    void BindStatic(RetT (*func)(ArgsT..., std::decay_t<BoundArgumentsT>...), BoundArgumentsT&&... boundArgs) {
         delete binding;
         binding = new FreeCallableImpl<decltype(func)>(func, std::forward<BoundArgumentsT>(boundArgs)...);
     }
 
     template <typename ObjectT, typename... BoundArgumentsT>
-    void BindRaw(ObjectT* object, RetT (ObjectT::*method)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
+    void BindRaw(ObjectT* object, RetT (ObjectT::*method)(ArgsT..., std::decay_t<BoundArgumentsT>...),
                  BoundArgumentsT&&... boundArgs) {
         delete binding;
         binding = new RawCallableImpl<ObjectT, decltype(method), BoundArgumentsT...>(
@@ -192,7 +197,7 @@ public:
 
     template <typename ObjectT, typename... BoundArgumentsT>
     void BindShared(const SharedPointer<ObjectT>& object,
-                    RetT (ObjectT::*method)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
+                    RetT (ObjectT::*method)(ArgsT..., std::decay_t<BoundArgumentsT>...),
                     BoundArgumentsT&&... boundArgs) {
         delete binding;
         binding = new SharedCallableImpl<ObjectT, decltype(method), BoundArgumentsT...>(
@@ -201,8 +206,7 @@ public:
 
     template <typename ObjectT, typename... BoundArgumentsT>
     void BindWeak(const WeakPointer<ObjectT>& object,
-                  RetT (ObjectT::*method)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
-                  BoundArgumentsT&&... boundArgs) {
+                  RetT (ObjectT::*method)(ArgsT..., std::decay_t<BoundArgumentsT>...), BoundArgumentsT&&... boundArgs) {
         delete binding;
         binding = new WeakCallableImpl<ObjectT, decltype(method), BoundArgumentsT...>(
             object, method, std::forward<BoundArgumentsT>(boundArgs)...);
@@ -218,26 +222,32 @@ typedef int64_t DelegateHandle;
 
 template <typename Signature> struct MultiDelegate;
 template <typename... ArgsT> struct MultiDelegate<void(ArgsT...)> {
+private:
+    struct DelegateData {
+        Delegate<void(ArgsT...)> DelegateInstance;
+        DelegateHandle Handle;
+    };
+
+public:
     using ArgsTuple = std::tuple<ArgsT...>;
 
     DelegateHandle AddDelegate(const Delegate<void(ArgsT...)>& delegate) {
         DelegateData data;
-        data.DelegeteInstance = delegate;
+        data.DelegateInstance = delegate;
         data.Handle = NextHandle++;
         Delegates.Push(data);
         return data.Handle;
     }
 
     template <typename... BoundArgumentsT>
-    DelegateHandle AddStatic(void (*func)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
-                             BoundArgumentsT&&... boundArgs) {
+    DelegateHandle AddStatic(void (*func)(ArgsT..., std::decay_t<BoundArgumentsT>...), BoundArgumentsT&&... boundArgs) {
         Delegate<void(ArgsT...)> delegate;
         delegate.BindStatic(func, std::forward<BoundArgumentsT>(boundArgs)...);
         return AddDelegate(delegate);
     }
 
     template <typename ObjectT, typename... BoundArgumentsT>
-    DelegateHandle AddRaw(ObjectT* object, void (*method)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
+    DelegateHandle AddRaw(ObjectT* object, void (*method)(ArgsT..., std::decay_t<BoundArgumentsT>...),
                           BoundArgumentsT&&... boundArgs) {
         Delegate<void(ArgsT...)> delegate;
         delegate.BindRaw(object, method, std::forward<BoundArgumentsT>(boundArgs)...);
@@ -246,7 +256,7 @@ template <typename... ArgsT> struct MultiDelegate<void(ArgsT...)> {
 
     template <typename ObjectT, typename... BoundArgumentsT>
     DelegateHandle AddShared(const SharedPointer<ObjectT>& object,
-                             void (ObjectT::*method)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
+                             void (ObjectT::*method)(ArgsT..., std::decay_t<BoundArgumentsT>...),
                              BoundArgumentsT&&... boundArgs) {
         Delegate<void(ArgsT...)> delegate;
         delegate.template BindShared<ObjectT, BoundArgumentsT...>(object, method,
@@ -256,7 +266,7 @@ template <typename... ArgsT> struct MultiDelegate<void(ArgsT...)> {
 
     template <typename ObjectT, typename... BoundArgumentsT>
     DelegateHandle AddShared(const Memory::EnableSharedFromThis<ObjectT>* object,
-                             void (ObjectT::*method)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
+                             void (ObjectT::*method)(ArgsT..., std::decay_t<BoundArgumentsT>...),
                              BoundArgumentsT&&... boundArgs) {
         Delegate<void(ArgsT...)> delegate;
         delegate.template BindShared<ObjectT, BoundArgumentsT...>(object->AsShared(), method,
@@ -266,7 +276,7 @@ template <typename... ArgsT> struct MultiDelegate<void(ArgsT...)> {
 
     template <typename ObjectT, typename... BoundArgumentsT>
     DelegateHandle AddWeak(const WeakPointer<ObjectT>& object,
-                           void (ObjectT::*method)(std::decay_t<ArgsT>..., std::decay_t<BoundArgumentsT>...),
+                           void (ObjectT::*method)(ArgsT..., std::decay_t<BoundArgumentsT>...),
                            BoundArgumentsT&&... boundArgs) {
         Delegate<void(ArgsT...)> delegate;
         delegate.template BindWeak<ObjectT, BoundArgumentsT...>(object, method,
@@ -285,17 +295,14 @@ template <typename... ArgsT> struct MultiDelegate<void(ArgsT...)> {
 
     void Clear() { Delegates.Resize(0); }
 
-    void Broadcast(ArgsT... args) const {
+    void Broadcast(ArgsT... args){
         for (int32_t i = 0; i < Delegates.Length(); ++i) {
-            Delegates[i].DelegeteInstance.Invoke(std::forward<ArgsT>(args)...);
+            DelegateData& delegate = Delegates[i];
+            delegate.DelegateInstance.Invoke(std::forward<ArgsT>(args)...);
         }
     }
 
 private:
-    struct DelegateData {
-        Delegate<void(ArgsT...)> DelegateInstance;
-        DelegateHandle Handle;
-    };
     Containers::List<DelegateData> Delegates;
     DelegateHandle NextHandle = 1;
 };

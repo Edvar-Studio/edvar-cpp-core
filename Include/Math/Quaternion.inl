@@ -147,7 +147,7 @@ inline Quaternion Quaternion::LookRotation(const Vector3f& forward, const Vector
 // Static constant
 // ============================================================================
 
-const Quaternion Quaternion::Identity = Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+inline const Quaternion Quaternion::Identity = Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
 
 // ============================================================================
 // Basic operations

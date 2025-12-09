@@ -4,7 +4,7 @@
 #include "Memory/Ops.hpp"
 #include "Utils/CString.hpp"
 #include "Utils/Meta.hpp"
-#include <type_traits>
+
 namespace Edvar::Containers {
 
 template <typename CharT> struct StringBase {

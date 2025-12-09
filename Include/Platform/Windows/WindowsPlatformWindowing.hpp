@@ -55,7 +55,9 @@ public:
     void SetMode(Windowing::WindowMode mode) override;
     void SetStyle(Windowing::WindowStyle style) override;
 
-    [[nodiscard]] void* GetNativeHandle() const { return NativeHandle; }
+    virtual void* GetNativeHandle() const override { return NativeHandle; }
+
+    bool OutputSupportsHDR() override;
 
     // Window procedure for message routing
     int64_t WindowProc(uint32_t msg, uint64_t wParam, int64_t lParam);

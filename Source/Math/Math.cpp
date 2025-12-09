@@ -1601,21 +1601,10 @@ Int32_4 Int32_4::operator-(const Int32_4& other) const {
 #endif
 }
 Int32_4 Int32_4::operator*(const Int32_4& other) const {
-#if EDVAR_CPP_CORE_MATH_MSVC_INTRINSICS && EDVAR_CPP_CORE_MATH_X86_SIMD
-    return CreateInt32_4FromMM128I(
-        _mm_mullo_epi32(*reinterpret_cast<const __m128i*>(XYZW), *reinterpret_cast<const __m128i*>(other.XYZW)));
-#elif EDVAR_CPP_CORE_MATH_GCC_INTRINSICS && EDVAR_CPP_CORE_MATH_X86_SIMD
-    return CreateInt32_4FromV4SI(
-        __builtin_ia32_pmulld128(*reinterpret_cast<const v4si*>(XYZW), *reinterpret_cast<const v4si*>(other.XYZW)));
-#elif EDVAR_CPP_CORE_MATH_ARM64_SIMD
-    return CreateInt32_4FromInt32x4(
-        vmulq_s32(*reinterpret_cast<const int32x4_t*>(XYZW), *reinterpret_cast<const int32x4_t*>(other.XYZW)));
-#elif EDVAR_CPP_CORE_MATH_ARM_SIMD
-    return CreateInt32_4FromInt32x4(
-        vmul_s32(*reinterpret_cast<const int32x4_t*>(XYZW), *reinterpret_cast<const int32x4_t*>(other.XYZW)));
-#else
     return Int32_4{X * other.X, Y * other.Y, Z * other.Z, W * other.W};
-#endif
+}
+Int32_4 Int32_4::operator/(const Int32_4& other) const {
+    return Int32_4{X / other.X, Y / other.Y, Z / other.Z, W / other.W};
 }
 Int32_4 Int32_4::LoadAligned(const int32_t* ptr) {
 #if EDVAR_CPP_CORE_MATH_MSVC_INTRINSICS && EDVAR_CPP_CORE_MATH_X86_SIMD

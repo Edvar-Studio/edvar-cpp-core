@@ -71,7 +71,7 @@ public:
     /**
      * @brief Destructor - automatically destroys the platform window
      */
-    ~Window();
+    ~Window() override;
 
     // Disable copy
     Window(const Window&) = delete;
@@ -94,6 +94,8 @@ public:
     [[nodiscard]] bool IsFocused() const;
     [[nodiscard]] WindowMode GetMode() const;
     [[nodiscard]] WindowStyle GetStyle() const;
+    [[nodiscard]] bool IsUsingHDRWhenPossible() const { return useHDRWhenPossible; }
+    [[nodiscard]] bool IsHDREnabled() const { return isHDREnabled; }
 
     // ========================================================================
     // Window Properties - Setters
@@ -107,6 +109,7 @@ public:
     void Focus();
     void SetMode(WindowMode mode);
     void SetStyle(WindowStyle style);
+    void SetUseHDRWhenPossible(bool useHDR);
 
     /**
      * @brief Called when the window has requested to close.
@@ -183,20 +186,25 @@ public:
      * @brief Check if the window is valid
      * @return True if the window has a valid platform implementation
      */
-    [[nodiscard]] bool IsValid() const { return Implementation != nullptr; }
+    [[nodiscard]] bool IsValid() const { return implementation != nullptr; }
+
+    [[nodiscard]] bool DoesCurrentOutputSupportHDR() const;
 
     /**
      * @brief Get the underlying platform implementation
      * @return Reference to the platform window implementation
      */
-    [[nodiscard]] Platform::IWindowImplementation& GetImplementation() const { return *Implementation; }
+    [[nodiscard]] Platform::IWindowImplementation& GetImplementation() const { return *implementation; }
     void TryClose(int32_t priorityLevel = 0);
 
-    SharedPointer<Rendering::ISwapchain> GetSwapchain() const { return Swapchain; }
+    SharedPointer<Rendering::ISwapchain> GetSwapchain() const { return swapchain; }
 
 private:
-    Platform::IWindowImplementation* Implementation = nullptr;
-    SharedPointer<Rendering::ISwapchain> Swapchain;
+    Platform::IWindowImplementation* implementation = nullptr;
+    bool useHDRWhenPossible = true;
+    bool isHDREnabled = false;
+    float currentDPI = 96.0f;
+    SharedPointer<Rendering::ISwapchain> swapchain;
 
     void InitializeRendering();
 };

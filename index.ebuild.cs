@@ -44,6 +44,9 @@ class EdvarCppCore : ModuleBase
             this.Libraries.Private.Add("User32.lib");
             this.Libraries.Private.Add("Advapi32.lib");
             this.Libraries.Private.Add("dbghelp.lib");
+            this.Libraries.Private.Add("Xinput.lib");
+            this.Libraries.Private.Add("d3d12.lib");
+            this.Libraries.Private.Add("dxgi.lib");
         }
         else if (context.Platform.Name == "linux")
         {

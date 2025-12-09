@@ -1,1 +1,1 @@
-Checks: 'bugprone-*,-bugprone-easily-swappable-parameters'
+Checks: 'bugprone-*,-bugprone-easily-swappable-parameters,-*-pro-type-static-cast-downcast,-*-explicit-constructor, -*-use-nodiscard'

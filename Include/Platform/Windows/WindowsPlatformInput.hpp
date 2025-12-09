@@ -20,8 +20,11 @@ public:
     void Update();
 
     // Internal methods for routing Windows messages
-    WindowsKeyboardDevice* GetPrimaryKeyboard() const { return PrimaryKeyboard; }
-    WindowsMouseDevice* GetPrimaryMouse() const { return PrimaryMouse; }
+    [[nodiscard]] WindowsKeyboardDevice* GetPrimaryKeyboard() const { return PrimaryKeyboard; }
+    [[nodiscard]] WindowsMouseDevice* GetPrimaryMouse() const { return PrimaryMouse; }
+
+    IInputDevice* GetKeyboard() override;
+    IInputDevice* GetMouse() override;
 
 private:
     Containers::List<IInputDevice*> Devices;
@@ -34,7 +37,7 @@ private:
 
 class WindowsKeyboardDevice final : public IKeyboardDevice {
 public:
-    WindowsKeyboardDevice(const Containers::String& name);
+    explicit WindowsKeyboardDevice();
     ~WindowsKeyboardDevice() override;
 
     [[nodiscard]] InputDeviceType GetDeviceType() const override { return InputDeviceType::Keyboard; }
@@ -53,7 +56,7 @@ public:
 private:
     Containers::String DeviceName;
     bool Connected = true;
-    
+
     static constexpr int32_t MaxKeys = 256;
     bool CurrentKeyState[MaxKeys] = {};
     bool PreviousKeyState[MaxKeys] = {};
@@ -61,7 +64,7 @@ private:
 
 class WindowsMouseDevice final : public IMouseDevice {
 public:
-    WindowsMouseDevice(const Containers::String& name);
+    WindowsMouseDevice();
     ~WindowsMouseDevice() override;
 
     [[nodiscard]] InputDeviceType GetDeviceType() const override { return InputDeviceType::Mouse; }
@@ -86,7 +89,7 @@ private:
 
     Math::Vector2<int32_t> Position;
     Math::Vector2<int32_t> Delta;
-    
+
     static constexpr int32_t MaxButtons = 5;
     bool CurrentButtonState[MaxButtons] = {};
     bool PreviousButtonState[MaxButtons] = {};
@@ -94,12 +97,14 @@ private:
 
 class WindowsGamepadDevice final : public IGamepadDevice {
 public:
-    WindowsGamepadDevice(int32_t xinputIndex);
+    explicit WindowsGamepadDevice(int32_t xinputIndex);
     ~WindowsGamepadDevice() override;
 
     [[nodiscard]] InputDeviceType GetDeviceType() const override { return InputDeviceType::Gamepad; }
     [[nodiscard]] Containers::String GetDeviceName() const override { return DeviceName; }
-    [[nodiscard]] void* GetNativeHandle() const override { return reinterpret_cast<void*>(static_cast<intptr_t>(XInputIndex)); }
+    [[nodiscard]] void* GetNativeHandle() const override {
+        return reinterpret_cast<void*>(static_cast<intptr_t>(XInputIndex));
+    }
     [[nodiscard]] bool IsConnected() const override { return Connected; }
 
     [[nodiscard]] GamepadType GetGamepadType() const override { return ControllerType; }

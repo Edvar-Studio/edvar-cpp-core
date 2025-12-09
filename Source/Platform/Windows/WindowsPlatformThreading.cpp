@@ -333,5 +333,12 @@ void WindowsThread::ForceKill() {
         NativeHandle = nullptr;
     }
 }
+#    pragma push_macro("CreateSemaphore")
+#    undef CreateSemaphore
+ISemaphoreImplementation& WindowsPlatformThreading::CreateSemaphore(int32_t initialCount, int32_t maxCount) {
+#    pragma pop_macro("CreateSemaphore")
+    WindowsSemaphore* newSemaphore = new WindowsSemaphore(initialCount, maxCount);
+    return *newSemaphore;
+}
 } // namespace Edvar::Platform::Windows
 #endif

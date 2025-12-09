@@ -1,6 +1,5 @@
 #pragma once
 
-#include "EdvarCore.hpp"
 namespace Edvar::Math {
 static constexpr double PI = 3.14159265358979323846;
 static constexpr double TWO_PI = 2.0 * PI;
@@ -149,6 +148,12 @@ EDVAR_CPP_CORE_API float Logarithm(float value, float base);
 
 EDVAR_CPP_CORE_API float SquareRoot(float value);
 EDVAR_CPP_CORE_API double SquareRoot(double value);
+template <typename T>
+EDVAR_CPP_CORE_FORCE_INLINE T SquareRoot(const T& value)
+    requires(std::is_integral_v<T>)
+{
+    return static_cast<T>(SquareRoot(static_cast<float>(value)));
+}
 
 EDVAR_CPP_CORE_API double InverseSquareRoot(double value);
 EDVAR_CPP_CORE_API float InverseSquareRoot(float value);
@@ -703,6 +708,7 @@ struct alignas(16) Int32_4 {
      * @return The resulting Int32_4 vector.
      */
     Int32_4 operator*(const Int32_4& other) const;
+    Int32_4 operator/(const Int32_4& other) const;
     /**
      * @brief Bitwise OR operation between two Int32_4 vectors. x will be OR'ed with other.x, y with other.y, etc.
      * @param other The other Int32_4 vector.

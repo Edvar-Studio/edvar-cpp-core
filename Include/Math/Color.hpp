@@ -93,7 +93,7 @@ struct LinearColor {
     }
 };
 
-LinearColor Color::ToLinearColor() const {
+inline LinearColor Color::ToLinearColor() const {
     LinearColor returnColor;
     for (int i = 0; i < 4; ++i) {
         float channel = static_cast<float>(RGBA[i]) / 255.0f;

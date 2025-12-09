@@ -34,47 +34,47 @@ inline Vector3<T>::Vector3(const Vector4<T>& vec4) : X(vec4.X), Y(vec4.Y), Z(vec
 
 template <typename T>
     requires(std::is_arithmetic_v<T>)
-const Vector3<T> Vector3<T>::Zero = Vector3<T>(static_cast<T>(0), static_cast<T>(0), static_cast<T>(0));
+inline const Vector3<T> Vector3<T>::Zero = Vector3<T>(static_cast<T>(0), static_cast<T>(0), static_cast<T>(0));
 
 template <typename T>
     requires(std::is_arithmetic_v<T>)
-const Vector3<T> Vector3<T>::One = Vector3<T>(static_cast<T>(1), static_cast<T>(1), static_cast<T>(1));
+inline const Vector3<T> Vector3<T>::One = Vector3<T>(static_cast<T>(1), static_cast<T>(1), static_cast<T>(1));
 
 template <typename T>
     requires(std::is_arithmetic_v<T>)
-const Vector3<T> Vector3<T>::UnitX = Vector3<T>(static_cast<T>(1), static_cast<T>(0), static_cast<T>(0));
+inline const Vector3<T> Vector3<T>::UnitX = Vector3<T>(static_cast<T>(1), static_cast<T>(0), static_cast<T>(0));
 
 template <typename T>
     requires(std::is_arithmetic_v<T>)
-const Vector3<T> Vector3<T>::UnitY = Vector3<T>(static_cast<T>(0), static_cast<T>(1), static_cast<T>(0));
+inline const Vector3<T> Vector3<T>::UnitY = Vector3<T>(static_cast<T>(0), static_cast<T>(1), static_cast<T>(0));
 
 template <typename T>
     requires(std::is_arithmetic_v<T>)
-const Vector3<T> Vector3<T>::UnitZ = Vector3<T>(static_cast<T>(0), static_cast<T>(0), static_cast<T>(1));
+inline const Vector3<T> Vector3<T>::UnitZ = Vector3<T>(static_cast<T>(0), static_cast<T>(0), static_cast<T>(1));
 
 template <typename T>
     requires(std::is_arithmetic_v<T>)
-const Vector3<T> Vector3<T>::Forward = Vector3<T>::UnitX;
+inline const Vector3<T> Vector3<T>::Forward = Vector3<T>::UnitX;
 
 template <typename T>
     requires(std::is_arithmetic_v<T>)
-const Vector3<T> Vector3<T>::Right = Vector3<T>::UnitY;
+inline const Vector3<T> Vector3<T>::Right = Vector3<T>::UnitY;
 
 template <typename T>
     requires(std::is_arithmetic_v<T>)
-const Vector3<T> Vector3<T>::Up = Vector3<T>::UnitZ;
+inline const Vector3<T> Vector3<T>::Up = Vector3<T>::UnitZ;
 
 template <typename T>
     requires(std::is_arithmetic_v<T>)
-const Vector3<T> Vector3<T>::Back = Vector3<T>(static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0));
+inline const Vector3<T> Vector3<T>::Back = Vector3<T>(static_cast<T>(-1), static_cast<T>(0), static_cast<T>(0));
 
 template <typename T>
     requires(std::is_arithmetic_v<T>)
-const Vector3<T> Vector3<T>::Left = Vector3<T>(static_cast<T>(0), static_cast<T>(-1), static_cast<T>(0));
+inline const Vector3<T> Vector3<T>::Left = Vector3<T>(static_cast<T>(0), static_cast<T>(-1), static_cast<T>(0));
 
 template <typename T>
     requires(std::is_arithmetic_v<T>)
-const Vector3<T> Vector3<T>::Down = Vector3<T>(static_cast<T>(0), static_cast<T>(0), static_cast<T>(-1));
+inline const Vector3<T> Vector3<T>::Down = Vector3<T>(static_cast<T>(0), static_cast<T>(0), static_cast<T>(-1));
 
 // ============================================================================
 // Arithmetic operators
@@ -231,7 +231,7 @@ inline Vector3<T> Vector3<T>::Cross(const Vector3<T>& other) const {
 template <typename T>
     requires(std::is_arithmetic_v<T>)
 inline T Vector3<T>::Length() const {
-    return Math::SquareRoot(LengthSquared());
+    return Math::SquareRoot(static_cast<T>(LengthSquared()));
 }
 
 template <typename T>

@@ -14,6 +14,7 @@ public:
                                                 void* arg) override;
     virtual IMutexImplementation& CreateMutex() override;
     virtual ISignalImplementation& CreateSignal() override;
+    virtual ISemaphoreImplementation& CreateSemaphore(int32_t initialCount, int32_t maxCount) override;
 
     static void RegisterThread(IThreadImplementation* thread);
     static void UnregisterThread(IThreadImplementation* thread);

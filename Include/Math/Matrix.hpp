@@ -45,7 +45,7 @@ struct alignas(std::is_same_v<T, double> ? 32 : 16) Matrix4x4 {
     // ========================================================================
     // Constructors
     // ========================================================================
-    
+
     /** Default constructor - uninitialized */
     Matrix4x4();
 
@@ -62,60 +62,60 @@ struct alignas(std::is_same_v<T, double> ? 32 : 16) Matrix4x4 {
     explicit Matrix4x4(const T elements[16]);
 
     /** Construct from 4 SIMD row vectors */
-    explicit Matrix4x4(const SIMDType& row0, const SIMDType& row1, 
+    explicit Matrix4x4(const SIMDType& row0, const SIMDType& row1,
                        const SIMDType& row2, const SIMDType& row3);
 
     // ========================================================================
     // Static constants
     // ========================================================================
-    
+
     /** Identity matrix */
     static const Matrix4x4<T> Identity;
-    
+
     /** Zero matrix */
     static const Matrix4x4<T> Zero;
 
     // ========================================================================
     // Element access
     // ========================================================================
-    
+
     /** Access element at (row, col) */
     T& operator()(int row, int col);
-    
+
     /** Access element at (row, col) - const version */
     const T& operator()(int row, int col) const;
 
     /** Get row as Vector4 */
     Vector4<T> GetRow(int index) const;
-    
+
     /** Get column as Vector4 */
     Vector4<T> GetColumn(int index) const;
 
     /** Set row from Vector4 */
     void SetRow(int index, const Vector4<T>& row);
-    
+
     /** Set column from Vector4 */
     void SetColumn(int index, const Vector4<T>& column);
 
     // ========================================================================
     // Matrix operations
     // ========================================================================
-    
+
     /** Matrix multiplication (handles transpose internally for SIMD) */
     Matrix4x4<T> operator*(const Matrix4x4<T>& other) const;
-    
+
     /** Transform Vector4 (treats as column vector) */
     Vector4<T> operator*(const Vector4<T>& vec) const;
 
     /** Matrix addition */
     Matrix4x4<T> operator+(const Matrix4x4<T>& other) const;
-    
+
     /** Matrix subtraction */
     Matrix4x4<T> operator-(const Matrix4x4<T>& other) const;
 
     /** Scalar multiplication */
     Matrix4x4<T> operator*(T scalar) const;
-    
+
     /** Scalar division */
     Matrix4x4<T> operator/(T scalar) const;
 
@@ -128,106 +128,106 @@ struct alignas(std::is_same_v<T, double> ? 32 : 16) Matrix4x4 {
 
     /** Equality comparison (with epsilon tolerance) */
     bool operator==(const Matrix4x4<T>& other) const;
-    
+
     /** Inequality comparison */
     bool operator!=(const Matrix4x4<T>& other) const;
 
     /** Transpose matrix */
     Matrix4x4<T> Transpose() const;
-    
+
     /** Calculate determinant */
     T Determinant() const;
-    
+
     /** Calculate inverse matrix */
     Matrix4x4<T> Inverse() const;
-    
+
     /** Check if matrix is invertible */
     bool IsInvertible(T epsilon = static_cast<T>(SMALL_NUMBER)) const;
 
     // ========================================================================
     // Transformation factories (Left-Handed Z-Up)
     // ========================================================================
-    
+
     /** Create translation matrix */
     static Matrix4x4<T> Translation(const Vector3<T>& translation);
-    
+
     /** Create rotation matrix around X-axis (radians) */
     static Matrix4x4<T> RotationX(T angleRadians);
-    
+
     /** Create rotation matrix around Y-axis (radians) */
     static Matrix4x4<T> RotationY(T angleRadians);
-    
+
     /** Create rotation matrix around Z-axis (radians) */
     static Matrix4x4<T> RotationZ(T angleRadians);
-    
+
     /** Create rotation matrix around arbitrary axis (radians) using Rodrigues' formula */
     static Matrix4x4<T> RotationAxis(const Vector3<T>& axis, T angleRadians);
-    
+
     /** Create rotation matrix from Quaternion (stubbed for now) */
     static Matrix4x4<T> RotationQuaternion(const Quaternion& quat);
-    
+
     /** Create non-uniform scale matrix */
     static Matrix4x4<T> Scale(const Vector3<T>& scale);
-    
+
     /** Create uniform scale matrix */
     static Matrix4x4<T> Scale(T uniformScale);
-    
+
     /** Create combined Translation-Rotation-Scale matrix */
     static Matrix4x4<T> TRS(const Vector3<T>& translation, const Quaternion& rotation, const Vector3<T>& scale);
-    
+
     /** Create look-at view matrix (Left-Handed Z-Up) */
     static Matrix4x4<T> LookAt(const Vector3<T>& eye, const Vector3<T>& target, const Vector3<T>& up);
 
     // ========================================================================
     // Projection factories (Left-Handed, [0,1] depth - D3D12 native)
     // ========================================================================
-    
+
     /** Create perspective projection matrix with field of view */
     static Matrix4x4<T> PerspectiveFov(T fovYRadians, T aspectRatio, T nearZ, T farZ);
-    
+
     /** Create perspective projection matrix with reverse Z for improved precision */
     static Matrix4x4<T> PerspectiveFov_ReverseZ(T fovYRadians, T aspectRatio, T nearZ, T farZ);
-    
+
     /** Create orthographic projection matrix */
     static Matrix4x4<T> Orthographic(T width, T height, T nearZ, T farZ);
-    
+
     /** Create orthographic projection matrix with off-center bounds */
     static Matrix4x4<T> OrthographicOffCenter(T left, T right, T bottom, T top, T nearZ, T farZ);
 
     // ========================================================================
     // Decomposition and utilities
     // ========================================================================
-    
+
     /** Decompose matrix into translation, rotation, and scale (stubbed - requires Quaternion) */
     bool Decompose(Vector3<T>& outTranslation, Quaternion& outRotation, Vector3<T>& outScale) const;
-    
+
     /** Extract translation component */
     Vector3<T> GetTranslation() const;
-    
+
     /** Set translation component */
     void SetTranslation(const Vector3<T>& translation);
-    
+
     /** Extract scale from basis vectors */
     Vector3<T> ExtractScale() const;
-    
+
     /** Remove scale from matrix (normalize basis vectors) */
     Matrix4x4<T> RemoveScale() const;
-    
+
     /** Get X-axis (right vector) */
     Vector3<T> GetAxisX() const;
-    
+
     /** Get Y-axis (forward vector in LH Z-up) */
     Vector3<T> GetAxisY() const;
-    
+
     /** Get Z-axis (up vector) */
     Vector3<T> GetAxisZ() const;
 
     /** Transform point (w = 1) */
     Vector3<T> TransformPoint(const Vector3<T>& point) const;
-    
+
     /** Transform vector/direction (w = 0) */
     Vector3<T> TransformVector(const Vector3<T>& vector) const;
-    
+
     /** Linear interpolation between two matrices */
     static Matrix4x4<T> Lerp(const Matrix4x4<T>& a, const Matrix4x4<T>& b, T alpha);
 };

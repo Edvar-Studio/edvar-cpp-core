@@ -4,10 +4,10 @@
 
 namespace Edvar::Threading {
 
-class ThreadPool : Memory::EnableSharedFromThis<ThreadPool> {
+class ThreadPool : public Memory::EnableSharedFromThis<ThreadPool> {
 public:
-    ThreadPool(const Containers::String& name, int32_t maxThreads)
-        : poolName(name), taskReadySemaphore(0, maxThreads), maxThreadCount(maxThreads) {
+    ThreadPool(const Containers::String& name, const int32_t maxThreads)
+        : taskReadySemaphore(0, maxThreads), maxThreadCount(maxThreads), poolName(name) {
         workerThreads = new Platform::IThreadImplementation*[maxThreadCount];
         for (int32_t i = 0; i < maxThreadCount; ++i) {
             Containers::String threadName = name + u"_Worker_" + Containers::String::PrintF(u"%d", i);
@@ -18,21 +18,22 @@ public:
 
     ThreadPool(const ThreadPool& other) = delete;
 
-    ThreadPool(ThreadPool&& other) noexcept : taskReadySemaphore(std::move(other.taskReadySemaphore)) {
-        poolMutex = std::move(other.poolMutex);
-        workerThreads = std::move(other.workerThreads);
-        maxThreadCount = std::move(other.maxThreadCount);
+    ThreadPool(ThreadPool&& other) noexcept : taskReadySemaphore(std::move(other.taskReadySemaphore)), poolMutex(other.poolMutex) {
+        workerThreads = other.workerThreads;
+        maxThreadCount = other.maxThreadCount;
         other.workerThreads = nullptr;
         other.maxThreadCount = 0;
+        other.poolMutex = Mutex();
     }
     ~ThreadPool() { delete[] workerThreads; }
 
     ThreadPool& operator=(ThreadPool&& other) noexcept {
         if (this != &other) {
-            poolMutex = std::move(other.poolMutex);
+            poolMutex = other.poolMutex;
             delete[] workerThreads;
-            workerThreads = std::move(other.workerThreads);
-            maxThreadCount = std::move(other.maxThreadCount);
+            workerThreads = other.workerThreads;
+            maxThreadCount = other.maxThreadCount;
+            other.poolMutex = Mutex();
             other.workerThreads = nullptr;
             other.maxThreadCount = 0;
         }
@@ -42,7 +43,7 @@ public:
     ThreadPool& operator=(const ThreadPool& other) = delete;
 
     template <typename... ArgsT> void EnqueueJob(const Utils::Function<int(ArgsT...)>& job, ArgsT... args) {
-        Utils::Function<int()> boundJob = [job, args...]() -> int { return job(std::forward<ArgsT>(args)...); };
+        const Utils::Function<int()> boundJob = [job, args...]() -> int { return job(std::forward<ArgsT>(args)...); };
         Threading::ScopedLock lock(poolMutex);
         jobQueue.Add(boundJob);
         // Each thread can handle one task at a time. So only signal if there are available threads.

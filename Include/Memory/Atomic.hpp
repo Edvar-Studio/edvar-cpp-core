@@ -23,10 +23,9 @@ enum class MemoryOrder : uint8_t { Relaxed, Consume, Acquire, Release, AcquireAn
 template <typename ValueT> class Atomic {
     static_assert(std::is_trivially_copyable_v<ValueT>, "atomic needs values to be trivially copyable");
     static_assert(sizeof(ValueT) <= 8, "atomic types can at max be 64-bit");
-    using StorageT = typename std::conditional<
+    using StorageT = std::conditional_t<
         sizeof(ValueT) == 1, int8_t,
-        typename std::conditional<sizeof(ValueT) == 2, int16_t,
-                                  typename std::conditional<sizeof(ValueT) == 4, int32_t, int64_t>::type>::type>::type;
+        std::conditional_t<sizeof(ValueT) == 2, int16_t, std::conditional_t<sizeof(ValueT) == 4, int32_t, int64_t>>>;
 
 public:
     Atomic() {
@@ -34,7 +33,7 @@ public:
         mutex = &Platform::Get().GetThreading().CreateMutex();
 #endif
     }
-    Atomic(const ValueT& InitialValue) : storage(InitialValue), Atomic() {}
+    explicit Atomic(const ValueT& initialValue) : Atomic() { storage = initialValue; }
 
     ~Atomic() {
 #if !EDVAR_MEMORY_PLATFORM_ATOMIC_SUPPORTED
@@ -43,13 +42,13 @@ public:
     }
 
     ValueT Load(MemoryOrder order = MemoryOrder::SequentiallyConsistent) const;
-    ValueT Store(const ValueT& newValue, MemoryOrder order = MemoryOrder::SequentiallyConsistent);
+    void Store(const ValueT& newValue, MemoryOrder order = MemoryOrder::SequentiallyConsistent);
     ValueT FetchAdd(const ValueT& value, MemoryOrder order = MemoryOrder::SequentiallyConsistent);
 
     operator ValueT() const { return Load(); }
-    ValueT operator=(const ValueT& newValue) {
+    Atomic& operator=(const ValueT& newValue) {
         Store(newValue);
-        return newValue;
+        return *this;
     }
 
     ValueT operator++() { return FetchAdd(1) + 1; }
@@ -70,9 +69,6 @@ private:
 
 namespace _z_private_AtomicDetails {
 struct Impl {
-    static void BeforeFence(MemoryOrder order);
-    static void AfterFence(MemoryOrder order);
-
     static void Store(Atomic<int8_t>& atomic, int8_t value, MemoryOrder order = MemoryOrder::SequentiallyConsistent);
     static void Store(Atomic<int16_t>& atomic, int16_t value, MemoryOrder order = MemoryOrder::SequentiallyConsistent);
     static void Store(Atomic<int32_t>& atomic, int32_t value, MemoryOrder order = MemoryOrder::SequentiallyConsistent);
@@ -96,17 +92,16 @@ struct Impl {
 }; // namespace _z_private_AtomicDetails
 template <typename ValueT> inline ValueT Atomic<ValueT>::Load(MemoryOrder order) const {
     return static_cast<ValueT>(
-        _z_private_AtomicDetails::Impl::Load(*(static_cast<const Atomic<StorageT>*>(this)), order));
+        _z_private_AtomicDetails::Impl::Load(reinterpret_cast<const Atomic<StorageT>&>(*this), order));
 }
 
-template <typename ValueT> inline ValueT Atomic<ValueT>::Store(const ValueT& newValue, MemoryOrder order) {
-    return static_cast<ValueT>(
-        _z_private_AtomicDetails::Impl::Store(*static_cast<const Atomic<StorageT>*>(this), newValue, order));
+template <typename ValueT> inline void Atomic<ValueT>::Store(const ValueT& newValue, MemoryOrder order) {
+    _z_private_AtomicDetails::Impl::Store(reinterpret_cast<Atomic<StorageT>&>(*this), newValue, order);
 }
 
 template <typename ValueT> inline ValueT Atomic<ValueT>::FetchAdd(const ValueT& value, MemoryOrder order) {
     return static_cast<ValueT>(
-        _z_private_AtomicDetails::Impl::FetchAdd(*static_cast<Atomic<StorageT>*>(this), value, order));
+        _z_private_AtomicDetails::Impl::FetchAdd(reinterpret_cast<Atomic<StorageT>&>(*this), value, order));
 }
 
 } // namespace Edvar::Memory

@@ -151,11 +151,12 @@ public:
         requires(std::is_move_constructible_v<DataType> || std::is_copy_constructible_v<DataType>)
     {
         if (Index >= Size) {
-            char16_t* errorMessage =
+            const char16_t* errorMessage =
                 Utils::CStrings::CreatePrintFString(u"Array: Index %d out of bounds [0, %s].", Index, Size - 1);
             Platform::Get().OnFatalError(errorMessage);
             delete[] errorMessage;
-            return;
+            // Make sure compiler is happy about this.
+            return Allocator[0];
         }
         if constexpr (std::is_move_constructible_v<DataType>) {
             DataType RemovedElement(std::move(Allocator[Index]));
@@ -163,9 +164,6 @@ public:
             ShiftElements<false>(Index + 1, -1);
             return RemovedElement;
         } else {
-            if (Index >= Size) {
-                return;
-            }
             DataType RemovedElement(Allocator[Index]);
             Allocator[Index].~DataType();
             ShiftElements<false>(Index + 1, -1);
@@ -230,7 +228,7 @@ public:
         requires(std::is_move_constructible_v<DataType> || std::is_copy_constructible_v<DataType>)
     {
         if (Size == 0) {
-            char16_t* errorMessage = Utils::CStrings::CreatePrintFString(u"Array: Pop from empty array.");
+            const char16_t* errorMessage = Utils::CStrings::CreatePrintFString(u"Array: Pop from empty array.");
             Platform::Get().OnFatalError(errorMessage);
             delete[] errorMessage;
             return DataType();
@@ -283,20 +281,20 @@ private:
 
 template <typename ListT, bool IsConst> class ListIterator {
 public:
-    using DataType = typename ListT::DataType;
-    using IndexType = typename ListT::IndexType;
-    using AllocatorType = typename ListT::AllocatorType;
+    using DataType = ListT::DataType;
+    using IndexType = ListT::IndexType;
+    using AllocatorType = ListT::AllocatorType;
 
     ListIterator(ListT& InList) : listRef(InList), currentIndex(0) {}
-    bool HasNext() const { return currentIndex < listRef.Length(); }
+    [[nodiscard]] bool HasNext() const { return currentIndex < listRef.Length(); }
     DataType& Next() { return listRef[currentIndex++]; }
 
-    bool HasPrevious() const { return currentIndex > 0; }
+    [[nodiscard]] bool HasPrevious() const { return currentIndex > 0; }
     DataType& Previous() { return listRef[--currentIndex]; }
 
     void Seek(IndexType Index) {
         if (Index < 0 || Index >= listRef.Length()) [[unlikely]] {
-            char16_t* errorMessage = Utils::CStrings::CreatePrintFString(
+            const char16_t* errorMessage = Utils::CStrings::CreatePrintFString(
                 u"ListIterator: Index %d out of bounds [0, %s].", Index, listRef.Length() - 1);
             Platform::Get().OnFatalError(errorMessage);
             delete[] errorMessage;

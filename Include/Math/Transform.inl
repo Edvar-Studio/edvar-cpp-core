@@ -78,7 +78,7 @@ inline Transform Transform::ScaleOnly(const Vector3d& scale) {
 // Static constant
 // ============================================================================
 
-const Transform Transform::Identity = Transform(Vector3d::Zero, Quaternion::Identity, Vector3d::One);
+inline const Transform Transform::Identity = Transform(Vector3d::Zero, Quaternion::Identity, Vector3d::One);
 
 // ============================================================================
 // Matrix conversion

@@ -54,5 +54,6 @@ enum class ResourceDataFormat : int32_t {
      */
     D32_Float = 40,
 
+    R10G10B10A2_UNorm = 24,
 };
 }

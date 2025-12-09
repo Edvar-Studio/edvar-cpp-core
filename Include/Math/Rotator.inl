@@ -67,7 +67,7 @@ inline Rotator Rotator::FromDirection(const Vector3d& direction, const Vector3d&
 // Static constant
 // ============================================================================
 
-const Rotator Rotator::Zero = Rotator(0.0, 0.0, 0.0);
+inline const Rotator Rotator::Zero = Rotator(0.0, 0.0, 0.0);
 
 // ============================================================================
 // Conversion

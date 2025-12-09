@@ -123,6 +123,7 @@ public:
     [[nodiscard]] virtual bool IsFocused() const = 0;
     [[nodiscard]] virtual Windowing::WindowMode GetMode() const = 0;
     [[nodiscard]] virtual Windowing::WindowStyle GetStyle() const = 0;
+    virtual void* GetNativeHandle() const = 0;
 
     // Window properties - Setters
     virtual void SetTitle(const Containers::String& title) = 0;
@@ -150,7 +151,9 @@ public:
     virtual void HandleMouseWheel(MouseWheelEventArgs& args);
     virtual void HandleTextInput(TextInputEventArgs& args);
 
-private:
+    virtual bool OutputSupportsHDR() { return false; }
+
+protected:
     friend class Edvar::Windowing::Window;
     Edvar::Windowing::Window* OwnerWrapper = nullptr;
 };

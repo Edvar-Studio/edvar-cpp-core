@@ -1,11 +1,8 @@
 #include "ForceInclude.hpp"
 #include "Platform/Windows/WindowsPlatformInput.hpp"
-#include "Platform/IPlatform.hpp"
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 #include <Xinput.h>
-
-#pragma comment(lib, "Xinput.lib")
 
 namespace Edvar::Platform::Windows {
 
@@ -13,45 +10,44 @@ namespace Edvar::Platform::Windows {
 // WindowsKeyboardDevice
 // ============================================================================
 
-WindowsKeyboardDevice::WindowsKeyboardDevice(const Containers::String& name)
-    : DeviceName(name) {
+WindowsKeyboardDevice::WindowsKeyboardDevice() : DeviceName(u"Keyboard") {
     for (int32_t i = 0; i < MaxKeys; ++i) {
         CurrentKeyState[i] = false;
         PreviousKeyState[i] = false;
     }
 }
 
-WindowsKeyboardDevice::~WindowsKeyboardDevice() {}
+WindowsKeyboardDevice::~WindowsKeyboardDevice() = default;
 
-bool WindowsKeyboardDevice::IsKeyDown(int32_t keyCode) const {
+bool WindowsKeyboardDevice::IsKeyDown(const int32_t keyCode) const {
     if (keyCode < 0 || keyCode >= MaxKeys) {
         return false;
     }
     return CurrentKeyState[keyCode];
 }
 
-bool WindowsKeyboardDevice::WasKeyPressed(int32_t keyCode) const {
+bool WindowsKeyboardDevice::WasKeyPressed(const int32_t keyCode) const {
     if (keyCode < 0 || keyCode >= MaxKeys) {
         return false;
     }
     return CurrentKeyState[keyCode] && !PreviousKeyState[keyCode];
 }
 
-bool WindowsKeyboardDevice::WasKeyReleased(int32_t keyCode) const {
+bool WindowsKeyboardDevice::WasKeyReleased(const int32_t keyCode) const {
     if (keyCode < 0 || keyCode >= MaxKeys) {
         return false;
     }
     return !CurrentKeyState[keyCode] && PreviousKeyState[keyCode];
 }
 
-void WindowsKeyboardDevice::ProcessKeyMessage(IWindowImplementation* window, int32_t keyCode, bool isDown, bool isRepeat) {
+void WindowsKeyboardDevice::ProcessKeyMessage(IWindowImplementation* window, const int32_t keyCode, const bool isDown,
+                                              const bool isRepeat) {
     if (keyCode >= 0 && keyCode < MaxKeys) {
-        bool wasDown = CurrentKeyState[keyCode];
         CurrentKeyState[keyCode] = isDown;
-        
+
         // Fire device event
         OnKey.Broadcast(*this, keyCode, isDown, isRepeat);
-        
+
         // Call window event handler if window provided
         if (window) {
             KeyEventArgs args;
@@ -66,7 +62,7 @@ void WindowsKeyboardDevice::ProcessKeyMessage(IWindowImplementation* window, int
 void WindowsKeyboardDevice::ProcessTextInput(IWindowImplementation* window, const Containers::String& text) {
     // Fire device event
     OnTextInput.Broadcast(*this, text);
-    
+
     // Call window event handler if window provided
     if (window) {
         TextInputEventArgs args;
@@ -86,8 +82,7 @@ void WindowsKeyboardDevice::UpdateState() {
 // WindowsMouseDevice
 // ============================================================================
 
-WindowsMouseDevice::WindowsMouseDevice(const Containers::String& name)
-    : DeviceName(name) {
+WindowsMouseDevice::WindowsMouseDevice() : DeviceName(u"Mouse") {
     for (int32_t i = 0; i < MaxButtons; ++i) {
         CurrentButtonState[i] = false;
         PreviousButtonState[i] = false;
@@ -96,37 +91,36 @@ WindowsMouseDevice::WindowsMouseDevice(const Containers::String& name)
     Delta = Math::Vector2<int32_t>(0, 0);
 }
 
-WindowsMouseDevice::~WindowsMouseDevice() {}
+WindowsMouseDevice::~WindowsMouseDevice() = default;
 
-bool WindowsMouseDevice::IsButtonDown(int32_t button) const {
+bool WindowsMouseDevice::IsButtonDown(const int32_t button) const {
     if (button < 0 || button >= MaxButtons) {
         return false;
     }
     return CurrentButtonState[button];
 }
 
-bool WindowsMouseDevice::WasButtonPressed(int32_t button) const {
+bool WindowsMouseDevice::WasButtonPressed(const int32_t button) const {
     if (button < 0 || button >= MaxButtons) {
         return false;
     }
     return CurrentButtonState[button] && !PreviousButtonState[button];
 }
 
-bool WindowsMouseDevice::WasButtonReleased(int32_t button) const {
+bool WindowsMouseDevice::WasButtonReleased(const int32_t button) const {
     if (button < 0 || button >= MaxButtons) {
         return false;
     }
     return !CurrentButtonState[button] && PreviousButtonState[button];
 }
 
-void WindowsMouseDevice::ProcessButtonMessage(IWindowImplementation* window, int32_t button, bool isDown) {
+void WindowsMouseDevice::ProcessButtonMessage(IWindowImplementation* window, const int32_t button, const bool isDown) {
     if (button >= 0 && button < MaxButtons) {
-        bool wasDown = CurrentButtonState[button];
         CurrentButtonState[button] = isDown;
-        
+
         // Fire device event
         OnButton.Broadcast(*this, button, isDown);
-        
+
         // Call window event handler if window provided
         if (window) {
             MouseButtonEventArgs args;
@@ -142,10 +136,10 @@ void WindowsMouseDevice::ProcessMoveMessage(IWindowImplementation* window, const
     Delta.X = position.X - Position.X;
     Delta.Y = position.Y - Position.Y;
     Position = position;
-    
+
     // Fire device event
     OnMove.Broadcast(*this, Position, Delta);
-    
+
     // Call window event handler if window provided
     if (window) {
         MouseMoveEventArgs args;
@@ -155,10 +149,10 @@ void WindowsMouseDevice::ProcessMoveMessage(IWindowImplementation* window, const
     }
 }
 
-void WindowsMouseDevice::ProcessWheelMessage(IWindowImplementation* window, float delta) {
+void WindowsMouseDevice::ProcessWheelMessage(IWindowImplementation* window, const float delta) {
     // Fire device event
     OnWheel.Broadcast(*this, delta);
-    
+
     // Call window event handler if window provided
     if (window) {
         MouseWheelEventArgs args;
@@ -181,32 +175,31 @@ void WindowsMouseDevice::UpdateState() {
 // WindowsGamepadDevice
 // ============================================================================
 
-WindowsGamepadDevice::WindowsGamepadDevice(int32_t xinputIndex)
-    : XInputIndex(xinputIndex) {
+WindowsGamepadDevice::WindowsGamepadDevice(const int32_t xinputIndex) : XInputIndex(xinputIndex) {
     CurrentState.Buttons = 0;
     CurrentState.LeftStick = Math::Vector2<float>(0.0f, 0.0f);
     CurrentState.RightStick = Math::Vector2<float>(0.0f, 0.0f);
     CurrentState.LeftTrigger = 0.0f;
     CurrentState.RightTrigger = 0.0f;
-    
+
     // Try to detect controller type
     DetectControllerType();
-    
+
     // Update to check if connected
     UpdateState();
 }
 
-WindowsGamepadDevice::~WindowsGamepadDevice() {}
+WindowsGamepadDevice::~WindowsGamepadDevice() = default;
 
-bool WindowsGamepadDevice::IsButtonDown(GamepadButton button) const {
+bool WindowsGamepadDevice::IsButtonDown(const GamepadButton button) const {
     return (CurrentState.Buttons & static_cast<uint32_t>(button)) != 0;
 }
 
-void WindowsGamepadDevice::SetVibration(float leftMotor, float rightMotor) {
+void WindowsGamepadDevice::SetVibration(const float leftMotor, const float rightMotor) {
     if (!Connected) {
         return;
     }
-    
+
     XINPUT_VIBRATION vibration;
     vibration.wLeftMotorSpeed = static_cast<WORD>(leftMotor * 65535.0f);
     vibration.wRightMotorSpeed = static_cast<WORD>(rightMotor * 65535.0f);
@@ -216,57 +209,74 @@ void WindowsGamepadDevice::SetVibration(float leftMotor, float rightMotor) {
 void WindowsGamepadDevice::UpdateState() {
     // Copy current state to previous for next frame
     PreviousState = CurrentState;
-    
+
     // Poll XInput state
     XINPUT_STATE xinputState;
-    DWORD result = XInputGetState(XInputIndex, &xinputState);
-    
-    if (result == ERROR_SUCCESS) {
+
+    if (const DWORD result = XInputGetState(XInputIndex, &xinputState); result == ERROR_SUCCESS) {
         if (!Connected) {
             Connected = true;
             OnConnected.Broadcast(*this);
         }
-        
+
         // Map XInput buttons to our button bitfield
         CurrentState.Buttons = 0;
-        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_A) CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::ButtonA);
-        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_B) CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::ButtonB);
-        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_X) CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::ButtonX);
-        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_Y) CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::ButtonY);
-        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER) CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::LeftShoulder);
-        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER) CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::RightShoulder);
-        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_BACK) CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::Back);
-        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_START) CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::Start);
-        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB) CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::LeftThumb);
-        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB) CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::RightThumb);
-        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP) CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::DPadUp);
-        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN) CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::DPadDown);
-        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT) CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::DPadLeft);
-        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT) CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::DPadRight);
-        
-        // Apply deadzone and normalize sticks
-        auto ApplyDeadzone = [](SHORT value, SHORT deadzone) -> float {
-            if (value < -deadzone) {
-                return static_cast<float>(value + deadzone) / (32768.0f - static_cast<float>(deadzone));
-            } else if (value > deadzone) {
-                return static_cast<float>(value - deadzone) / (32767.0f - static_cast<float>(deadzone));
+        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_A)
+            CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::ButtonA);
+        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_B)
+            CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::ButtonB);
+        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_X)
+            CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::ButtonX);
+        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_Y)
+            CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::ButtonY);
+        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER)
+            CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::LeftShoulder);
+        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER)
+            CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::RightShoulder);
+        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_BACK)
+            CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::Back);
+        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_START)
+            CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::Start);
+        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB)
+            CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::LeftThumb);
+        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB)
+            CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::RightThumb);
+        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP)
+            CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::DPadUp);
+        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN)
+            CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::DPadDown);
+        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT)
+            CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::DPadLeft);
+        if (xinputState.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT)
+            CurrentState.Buttons |= static_cast<uint32_t>(GamepadButton::DPadRight);
+
+        // Apply dead-zone and normalize sticks
+        auto ApplyDeadZone = [](const SHORT value, const SHORT DeadZone) -> float {
+            if (value < -DeadZone) {
+                return static_cast<float>(value + DeadZone) / (32768.0f - static_cast<float>(DeadZone));
+            } else if (value > DeadZone) {
+                return static_cast<float>(value - DeadZone) / (32767.0f - static_cast<float>(DeadZone));
             }
             return 0.0f;
         };
-        
-        CurrentState.LeftStick.X = ApplyDeadzone(xinputState.Gamepad.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-        CurrentState.LeftStick.Y = ApplyDeadzone(xinputState.Gamepad.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
-        CurrentState.RightStick.X = ApplyDeadzone(xinputState.Gamepad.sThumbRX, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
-        CurrentState.RightStick.Y = ApplyDeadzone(xinputState.Gamepad.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
-        
+
+        CurrentState.LeftStick.X = ApplyDeadZone(xinputState.Gamepad.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+        CurrentState.LeftStick.Y = ApplyDeadZone(xinputState.Gamepad.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE);
+        CurrentState.RightStick.X = ApplyDeadZone(xinputState.Gamepad.sThumbRX, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+        CurrentState.RightStick.Y = ApplyDeadZone(xinputState.Gamepad.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE);
+
         // Normalize triggers
-        CurrentState.LeftTrigger = xinputState.Gamepad.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD 
-            ? static_cast<float>(xinputState.Gamepad.bLeftTrigger - XINPUT_GAMEPAD_TRIGGER_THRESHOLD) / (255.0f - static_cast<float>(XINPUT_GAMEPAD_TRIGGER_THRESHOLD))
-            : 0.0f;
-        CurrentState.RightTrigger = xinputState.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD
-            ? static_cast<float>(xinputState.Gamepad.bRightTrigger - XINPUT_GAMEPAD_TRIGGER_THRESHOLD) / (255.0f - static_cast<float>(XINPUT_GAMEPAD_TRIGGER_THRESHOLD))
-            : 0.0f;
-        
+        CurrentState.LeftTrigger =
+            xinputState.Gamepad.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD
+                ? static_cast<float>(xinputState.Gamepad.bLeftTrigger - XINPUT_GAMEPAD_TRIGGER_THRESHOLD) /
+                      (255.0f - static_cast<float>(XINPUT_GAMEPAD_TRIGGER_THRESHOLD))
+                : 0.0f;
+        CurrentState.RightTrigger =
+            xinputState.Gamepad.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD
+                ? static_cast<float>(xinputState.Gamepad.bRightTrigger - XINPUT_GAMEPAD_TRIGGER_THRESHOLD) /
+                      (255.0f - static_cast<float>(XINPUT_GAMEPAD_TRIGGER_THRESHOLD))
+                : 0.0f;
+
         // Fire state changed event
         OnStateChanged.Broadcast(*this, CurrentState);
     } else {
@@ -338,7 +348,7 @@ void WindowsGamepadDevice::DetectControllerType() {
 WindowsPlatformInput::WindowsPlatformInput() {
     // Create primary keyboard and mouse devices
     EnumerateDevices();
-    
+
     // Enumerate XInput gamepads
     EnumerateGamepads();
 }
@@ -350,11 +360,9 @@ WindowsPlatformInput::~WindowsPlatformInput() {
     }
 }
 
-Containers::List<IInputDevice*> WindowsPlatformInput::GetDevices() {
-    return Devices;
-}
+Containers::List<IInputDevice*> WindowsPlatformInput::GetDevices() { return Devices; }
 
-Containers::List<IInputDevice*> WindowsPlatformInput::GetDevicesByType(InputDeviceType type) {
+Containers::List<IInputDevice*> WindowsPlatformInput::GetDevicesByType(const InputDeviceType type) {
     Containers::List<IInputDevice*> result;
     for (int32_t i = 0; i < Devices.Length(); ++i) {
         if (Devices[i]->GetDeviceType() == type) {
@@ -366,12 +374,12 @@ Containers::List<IInputDevice*> WindowsPlatformInput::GetDevicesByType(InputDevi
 
 void WindowsPlatformInput::EnumerateDevices() {
     // Create primary keyboard device
-    WindowsKeyboardDevice* keyboard = new WindowsKeyboardDevice(u"Primary Keyboard");
+    auto* keyboard = new WindowsKeyboardDevice();
     Devices.Push(keyboard);
     PrimaryKeyboard = keyboard;
-    
+
     // Create primary mouse device
-    WindowsMouseDevice* mouse = new WindowsMouseDevice(u"Primary Mouse");
+    auto* mouse = new WindowsMouseDevice();
     Devices.Push(mouse);
     PrimaryMouse = mouse;
 }
@@ -379,7 +387,7 @@ void WindowsPlatformInput::EnumerateDevices() {
 void WindowsPlatformInput::EnumerateGamepads() {
     // XInput supports up to 4 controllers
     for (int32_t i = 0; i < XUSER_MAX_COUNT; ++i) {
-        WindowsGamepadDevice* gamepad = new WindowsGamepadDevice(i);
+        auto* gamepad = new WindowsGamepadDevice(i);
         Devices.Push(gamepad);
     }
 }
@@ -396,5 +404,7 @@ void WindowsPlatformInput::Update() {
         }
     }
 }
+IInputDevice* WindowsPlatformInput::GetKeyboard() { return GetPrimaryKeyboard(); }
+IInputDevice* WindowsPlatformInput::GetMouse() { return GetPrimaryMouse(); }
 
 } // namespace Edvar::Platform::Windows
