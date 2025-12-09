@@ -40,8 +40,8 @@ inline WindowStyle& operator&=(WindowStyle& lhs, WindowStyle rhs) {
 
 struct WindowDescriptor {
     Containers::String Title = u"Edvar Window";
-    Math::Vector2<int32_t> Position = Math::Vector2<int32_t>(100, 100);
-    Math::Vector2<int32_t> Size = Math::Vector2<int32_t>(1280, 720);
+    Utils::Optional<Math::Vector2i> Position;
+    Utils::Optional<Math::Vector2i> Size;
     WindowMode Mode = WindowMode::Windowed;
     WindowStyle Style = WindowStyle::Default;
     bool Visible = true;

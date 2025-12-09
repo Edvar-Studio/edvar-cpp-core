@@ -93,17 +93,17 @@ IWindowImplementation& WindowsPlatformWindowing::CreateWindow(const Windowing::W
     if (descriptor.Visible) {
         style |= WS_VISIBLE;
     }
-
+    const Math::Vector2i position = descriptor.Position.GetOrDefault(Math::Vector2i(CW_USEDEFAULT));
+    const Math::Vector2i size = descriptor.Size.GetOrDefault(Math::Vector2i(CW_USEDEFAULT));
     // Adjust window rect for client area
-    RECT rect = {descriptor.Position.X, descriptor.Position.Y, descriptor.Position.X + descriptor.Size.X,
-                 descriptor.Position.Y + descriptor.Size.Y};
+    RECT rect = {position.X, position.Y, position.X + size.X, position.Y + size.Y};
     AdjustWindowRectEx(&rect, style, FALSE, exStyle);
 
     // Convert title to wide string
     // Assume wchar_t is the same size as char16_t
     static_assert(sizeof(wchar_t) == sizeof(char16_t),
                   "wchar_t and char16_t must be the same size in windows platform.");
-    const wchar_t* title = reinterpret_cast<const wchar_t*>(descriptor.Title.Data());
+    const auto* title = reinterpret_cast<const wchar_t*>(descriptor.Title.Data());
 
     // Create the window
     HWND hwnd = CreateWindowExW(exStyle, L"EdvarWindowClass", title, style, rect.left, rect.top, rect.right - rect.left,
