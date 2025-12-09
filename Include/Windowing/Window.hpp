@@ -56,7 +56,7 @@ struct WindowDescriptor {
  * a clean interface for window operations.
  */
 class EDVAR_CPP_CORE_API Window : public Memory::EnableSharedFromThis<Window> {
-public:
+
     /**
      * @brief Creates a new window with the specified descriptor
      * @param descriptor Configuration for the window (title, size, position, etc.)
@@ -67,6 +67,9 @@ public:
      * @brief Creates a window with default settings
      */
     Window();
+
+public:
+    static SharedReference<Window> Create(const WindowDescriptor& descriptor) { return {new Window(descriptor)}; }
 
     /**
      * @brief Destructor - automatically destroys the platform window
