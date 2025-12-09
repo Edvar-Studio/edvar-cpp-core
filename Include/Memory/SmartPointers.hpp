@@ -101,7 +101,7 @@ public:
             return;
         }
         managedObject = object;
-        if constexpr (std::is_base_of_v<_z__Private::EnableSharedFromThisBase, ValueT>) {
+        if constexpr (sizeof(ValueT) > 0 && std::is_base_of_v<_z__Private::EnableSharedFromThisBase, ValueT>) {
             if (this->managedObject != nullptr) {
                 auto* enableShared = static_cast<EnableSharedFromThis<ValueT>*>(this->managedObject);
                 enableShared->weakThis = WeakPointer<ValueT, ThreadSafe>();
@@ -162,7 +162,14 @@ public:
 
     template <typename OtherT, bool OtherThreadSafe>
     SharedPointer(const SharedPointer<OtherT, OtherThreadSafe>& other)
-        : ReferenceCountedPointerBase<T, ThreadSafe>(other.GetCounter()) {
+        : ReferenceCountedPointerBase<T, ThreadSafe>(other.InternalGetCounter()) {
+        this->InternalSetManagedObject(other.Get());
+        this->template IncreaseCounter<true>();
+    }
+
+    template <typename OtherT, bool OtherThreadSafe>
+    SharedPointer(const SharedReference<OtherT, OtherThreadSafe>& other)
+        : ReferenceCountedPointerBase<T, ThreadSafe>(other.InternalGetCounter()) {
         this->InternalSetManagedObject(other.Get());
         this->template IncreaseCounter<true>();
     }

@@ -34,5 +34,5 @@ public:
     [[nodiscard]] virtual const char* GetName() const = 0;
 };
 
-IPlatform& EDVAR_CPP_CORE_API Get();
+EDVAR_CPP_CORE_API IPlatform& Get();
 } // namespace Edvar::Platform

@@ -69,8 +69,8 @@ double SquareRoot(double value) { return std::sqrt(value); }
 double InverseSquareRoot(double value) { return 1.0 / std::sqrt(value); }
 float InverseSquareRoot(float value) { return 1.0f / std::sqrt(value); }
 
-EDVAR_CPP_CORE_API double Exp(double exponent) { return std::exp(exponent); }
-EDVAR_CPP_CORE_API float Exp(float exponent) { return std::exp(exponent); }
+double Exp(double exponent) { return std::exp(exponent); }
+float Exp(float exponent) { return std::exp(exponent); }
 
 double Root(double value, double degree) { return std::pow(value, 1.0 / degree); }
 float Root(float value, float degree) { return std::pow(value, 1.0f / degree); }

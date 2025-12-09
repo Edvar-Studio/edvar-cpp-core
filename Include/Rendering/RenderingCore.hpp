@@ -8,6 +8,7 @@ typedef Memory::SharedReference<IRenderDevice> RenderDeviceRef;
 class EDVAR_CPP_CORE_API IRenderDeviceDependent : public Memory::EnableSharedFromThis<IRenderDeviceDependent> {
 public:
     ~IRenderDeviceDependent() override;
+    IRenderDeviceDependent(const IRenderDeviceDependent&) = delete;
     explicit IRenderDeviceDependent(const SharedReference<IRenderDevice>& device);
 
     SharedReference<IRenderDevice> GetAssociatedDevice() const;
@@ -16,6 +17,8 @@ public:
 
     virtual void OnRenderDeviceLost() {};
     virtual void OnRenderDeviceRestored(IRenderDevice& newDevice);
+
+    IRenderDeviceDependent& operator=(const IRenderDeviceDependent&) = delete;
 
 private:
     SharedReference<IRenderDevice> associatedDevice;
