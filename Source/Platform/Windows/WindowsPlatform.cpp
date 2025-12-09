@@ -22,13 +22,11 @@ IPlatformInput& WindowsPlatform::GetInput() const {
     return input;
 }
 void WindowsPlatform::PrintMessageToDebugger(const char16_t* message) {
-    if (IsDebuggerPresent()) {
-        const int32_t bufferSize = Utils::CStrings::ToWCharString(message, nullptr, 0) + 1;
-        auto* buffer = new wchar_t[bufferSize];
-        Utils::CStrings::ToWCharString(message, buffer, bufferSize);
-        OutputDebugStringW(buffer);
-        delete[] buffer;
-    }
+    const int32_t bufferSize = Utils::CStrings::ToWCharString(message, nullptr, 0) + 1;
+    auto* buffer = new wchar_t[bufferSize];
+    Utils::CStrings::ToWCharString(message, buffer, bufferSize);
+    OutputDebugStringW(buffer);
+    delete[] buffer;
 }
 } // namespace Edvar::Platform::Windows
 #endif

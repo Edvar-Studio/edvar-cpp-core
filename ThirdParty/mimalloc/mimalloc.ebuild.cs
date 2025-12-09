@@ -420,7 +420,6 @@ public class Mimalloc : ModuleBase
         else if (context.RequestedOutput is "static" or "default")
         {
             Definitions.Public.Add("MI_STATIC_LIB=1");
-            Definitions.Public.Add("mi_decl_export=");
             CompilerOptions.AddRange(miCFlagsStatic);
             Libraries.Private.AddRange(miLibraries);
         }
