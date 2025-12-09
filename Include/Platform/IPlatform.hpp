@@ -25,6 +25,7 @@ public:
 
     virtual void Abort();
     virtual void OnFatalError(const char16_t* message);
+    virtual void PrintMessageToDebugger(const char16_t* message);
 
     [[nodiscard]] virtual Memory::IMemoryAllocator* GetAllocator() const;
     [[nodiscard]] virtual IPlatformThreading& GetThreading() const = 0;

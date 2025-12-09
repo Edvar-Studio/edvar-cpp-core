@@ -10,6 +10,7 @@ EDVAR_CPP_CORE_API int32_t Length(const char* buffer);
 EDVAR_CPP_CORE_API int32_t SPrintF(char16_t* buffer, uint32_t bufferLength, const char16_t* format, ...);
 EDVAR_CPP_CORE_API char16_t* CreatePrintFString(const char16_t* format, ...);
 EDVAR_CPP_CORE_API int32_t FPrintF(const void* file, const char16_t* format, ...);
+EDVAR_CPP_CORE_API void PrintF(const char16_t* format, ...);
 
 EDVAR_CPP_CORE_API int32_t ToCharString(const wchar_t* inString, char* buffer, int32_t bufferLength);
 EDVAR_CPP_CORE_API int32_t ToCharString(const char8_t* inString, char* buffer, int32_t bufferLength);

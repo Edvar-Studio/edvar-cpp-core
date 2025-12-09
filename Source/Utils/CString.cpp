@@ -66,6 +66,23 @@ char16_t* CreatePrintFString(const char16_t* format, ...) {
     va_end(arg);
     return returnBuffer;
 }
+void PrintF(const char16_t* format, ...) {
+    if (!format) {
+        return;
+    }
+    const int32_t formatAsWCharLength = ToWCharString(format, nullptr, 0);
+    if (formatAsWCharLength <= 0) {
+        return;
+    }
+    auto* formatAsWChar = new wchar_t[formatAsWCharLength];
+    ToWCharString(format, formatAsWChar, formatAsWCharLength);
+
+    va_list arg;
+    va_start(arg, format);
+    vwprintf(formatAsWChar, arg);
+    va_end(arg);
+    delete[] formatAsWChar;
+}
 int32_t ToCharString(const wchar_t* inString, char* buffer, const int32_t bufferLength) {
     const int32_t utf16Size = ToUtf16String(inString, nullptr, bufferLength);
     auto* utf16Buffer = new char16_t[utf16Size];

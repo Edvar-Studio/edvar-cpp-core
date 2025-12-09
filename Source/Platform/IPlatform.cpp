@@ -7,7 +7,6 @@
 #    include "Memory/CMemoryAllocator.hpp"
 #endif
 
-
 /**
  * Add include of the platform headers here to allow them to be selected.
  */
@@ -27,8 +26,10 @@ Memory::IMemoryAllocator* IPlatform::GetAllocator() const {
 
 void IPlatform::Abort() { std::abort(); }
 void IPlatform::OnFatalError(const char16_t* message) {
+    PrintMessageToDebugger(message);
     Abort();
 }
+void IPlatform::PrintMessageToDebugger(const char16_t* message) { Utils::CStrings::PrintF(u"%s\n", message); }
 
 IPlatform& Get() {
     static PlatformType platform;

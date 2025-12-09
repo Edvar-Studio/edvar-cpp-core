@@ -13,6 +13,7 @@ class WindowsPlatform final : public IPlatform{
     [[nodiscard]] IPlatformThreading& GetThreading() const override;
     [[nodiscard]] IPlatformWindowing& GetWindowing() const override;
     [[nodiscard]] IPlatformInput& GetInput() const override;
+     virtual void PrintMessageToDebugger(const char16_t* message) override;
 };
 }
 

@@ -118,7 +118,9 @@ void D3D12Swapchain::OnRenderDeviceRestored(IRenderDevice& newDevice) {
     CreateNativeSwapchain(GetAssociatedWindow(), GetFormat());
 }
 void D3D12Swapchain::CreateNativeSwapchain(const Windowing::Window& forWindow, ResourceDataFormat newDataFormat) {
+    Platform::Get().PrintMessageToDebugger(u"D3D12: Creating Swapchain for window.\n");
     const SharedPointer<D3D12RenderDevice> device = StaticCastSharedReference<D3D12RenderDevice>(GetAssociatedDevice());
+    Platform::Get().PrintMessageToDebugger(*String::PrintF(u"D3D12: Using device handle %p.\n", device->nativeHandle));
     IDXGISwapChain1* swapChain = nullptr;
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
     swapChainDesc.BufferCount = 3;
@@ -133,6 +135,7 @@ void D3D12Swapchain::CreateNativeSwapchain(const Windowing::Window& forWindow, R
     if (FAILED(GDXGIFactory->CreateSwapChainForHwnd(static_cast<IUnknown*>(device->nativeHandle),
                                                     static_cast<HWND>(forWindow.GetImplementation().GetNativeHandle()),
                                                     &swapChainDesc, nullptr, nullptr, &swapChain))) {
+        Platform::Get().PrintMessageToDebugger(u"D3D12: Failed to create swapchain for window.\n");
         CheckDeviceSanity();
         return;
     }

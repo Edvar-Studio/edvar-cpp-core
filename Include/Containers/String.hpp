@@ -40,6 +40,8 @@ template <typename CharT> struct StringBase {
         return *this;
     }
 
+    const CharT* operator*() const { return Data(); }
+
     ~StringBase() = default;
 
     [[nodiscard]] const CharT* Data() const { return Buffer.Data(); }

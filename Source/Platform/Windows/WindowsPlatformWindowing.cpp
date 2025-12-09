@@ -14,8 +14,8 @@
 namespace Edvar::Platform::Windows {
 
 // Global map to store window instances for message routing
-static Containers::List<WindowsWindow*> g_WindowInstances;
-static Threading::Mutex g_WindowInstancesMutex;
+static Containers::List<WindowsWindow*> GWindowInstances;
+static Threading::Mutex GWindowInstancesMutex;
 
 // Forward declarations
 static LRESULT CALLBACK GlobalWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
@@ -58,6 +58,7 @@ const MonitorInfo& WindowsPlatformWindowing::GetPrimaryMonitor() { return Primar
 IWindowImplementation& WindowsPlatformWindowing::CreateWindow(const Windowing::WindowDescriptor& descriptor) {
 #pragma pop_macro("CreateWindow")
     if (!WindowClassRegistered) {
+        Platform::Get().PrintMessageToDebugger(u"Registering window class.");
         RegisterWindowClass();
     }
 
@@ -108,20 +109,19 @@ IWindowImplementation& WindowsPlatformWindowing::CreateWindow(const Windowing::W
     // Create the window
     HWND hwnd = CreateWindowExW(exStyle, L"EdvarWindowClass", title, style, rect.left, rect.top, rect.right - rect.left,
                                 rect.bottom - rect.top, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
-
+    Platform::Get().PrintMessageToDebugger(*String::PrintF(u"Created window with handle: %p", hwnd));
     if (!hwnd) {
         Platform::Get().OnFatalError(u"Failed to create window");
         // Create a dummy window to return
-        hwnd = CreateWindowExW(0, L"STATIC", L"", 0, 0, 0, 0, 0, nullptr, nullptr, nullptr, nullptr);
     }
 
     // Create WindowsWindow instance
-    WindowsWindow* window = new WindowsWindow(hwnd, descriptor);
+    auto* window = new WindowsWindow(hwnd, descriptor);
 
     // Store in global map
     {
-        Threading::ScopedLock lock(g_WindowInstancesMutex);
-        g_WindowInstances.Push(window);
+        Threading::ScopedLock lock(GWindowInstancesMutex);
+        GWindowInstances.Push(window);
     }
 
     // Store pointer in window user data for message routing
@@ -135,10 +135,10 @@ void WindowsPlatformWindowing::DestroyWindow(IWindowImplementation& window) {
 
     // Remove from global map
     {
-        Threading::ScopedLock lock(g_WindowInstancesMutex);
-        for (int32_t i = 0; i < g_WindowInstances.Length(); ++i) {
-            if (g_WindowInstances[i] == winWindow) {
-                g_WindowInstances.RemoveAt(i);
+        Threading::ScopedLock lock(GWindowInstancesMutex);
+        for (int32_t i = 0; i < GWindowInstances.Length(); ++i) {
+            if (GWindowInstances[i] == winWindow) {
+                GWindowInstances.RemoveAt(i);
                 break;
             }
         }
