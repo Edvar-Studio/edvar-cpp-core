@@ -95,7 +95,6 @@ public:
     }
 
     ReferenceCounter<ThreadSafe>* InternalGetCounter() const { return this->Counter; }
-
     void InternalSetManagedObject(ValueT* object) {
         if (object == this->managedObject) {
             return;

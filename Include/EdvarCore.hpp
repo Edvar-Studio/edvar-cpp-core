@@ -33,6 +33,7 @@
 #include <cstdint>                                    // IWYU pragma: export
 #include <type_traits>                                // IWYU pragma: export
 #include <utility>                                    // IWYU pragma: export
+#include "Memory/MemoryAllocator.hpp"                 // IWYU pragma: export
 #include "Utils/Optional.hpp"                         // IWYU pragma: export
 #include "Containers/Allocators/DefaultAllocator.hpp" // IWYU pragma: export
 namespace Edvar::Containers {
@@ -48,7 +49,7 @@ using String = Edvar::Containers::String;
 #include "Containers/List.hpp"   // IWYU pragma: export
 #include "Containers/String.hpp" // IWYU pragma: export
 
-#include "Math/All.hpp"   // IWYU pragma: export
+#include "Math/All.hpp" // IWYU pragma: export
 
 #include "Utils/Hash.hpp" // IWYU pragma: export
 
@@ -59,3 +60,9 @@ using String = Edvar::Containers::String;
 
 #include "I18N/Locale.hpp"      // IWYU pragma: export
 #include "Utils/Functional.hpp" // IWYU pragma: export
+
+
+
+
+
+#include "Containers/String.inl"

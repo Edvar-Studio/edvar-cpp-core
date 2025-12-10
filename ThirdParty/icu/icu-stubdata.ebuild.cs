@@ -21,7 +21,9 @@ public class IcuStubData : ModuleBase
         Includes.Private.Add("source/icu/source/common");
 
         var sourceBase = Path.Join(context.ModuleDirectory.FullName, "source", "icu", "source", "stubdata");
-
+        if(context.Configuration is "debug"){
+            Console.WriteLine("ICU StubData module will be compiled in debug mode");
+        }
         if (context.Platform.Name == "windows")
         {
             Definitions.Private.Add("_CRT_SECURE_NO_WARNINGS");

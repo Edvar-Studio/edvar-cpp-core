@@ -8,6 +8,54 @@ template <typename ListT, bool IsConst> class ListIterator;
 template <typename T, typename AllocatorT> struct List {
 public:
     List() : Size(0), Capacity(0), Allocator() {}
+    List(const List& other)
+        requires(std::is_copy_constructible_v<T>)
+        : Size(other.Size), Capacity(other.Capacity), Allocator() {
+        Allocator.Allocate(Capacity);
+        for (IndexType i = 0; i < Size; ++i) {
+            new (Allocator.Data() + i) T(other.Allocator[i]);
+        }
+    }
+    List(List&& other) noexcept : Size(other.Size), Capacity(other.Capacity), Allocator(std::move(other.Allocator)) {
+        other.Size = 0;
+        other.Capacity = 0;
+        other.Allocator = AllocatorT();
+    }
+    ~List() {
+        for (IndexType i = 0; i < Size; ++i) {
+            Allocator[i].~T();
+        }
+    }
+
+    List& operator=(const List& other) {
+        if (this != &other) {
+            for (IndexType i = 0; i < Size; ++i) {
+                Allocator[i].~T();
+            }
+            Size = other.Size;
+            Capacity = other.Capacity;
+            Allocator.Allocate(Capacity);
+            for (IndexType i = 0; i < Size; ++i) {
+                new (Allocator.Data() + i) T(other.Allocator[i]);
+            }
+        }
+        return *this;
+    }
+
+    List& operator=(List&& other) noexcept {
+        if (this != &other) {
+            for (IndexType i = 0; i < Size; ++i) {
+                Allocator[i].~T();
+            }
+            Size = other.Size;
+            Capacity = other.Capacity;
+            Allocator = std::move(other.Allocator);
+            other.Size = 0;
+            other.Capacity = 0;
+            other.Allocator = AllocatorT();
+        }
+        return *this;
+    }
 
     using AllocatorType = AllocatorT;
     using DataType = T;

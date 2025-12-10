@@ -8,8 +8,6 @@
 #include <windowsx.h>
 #include <shellscalingapi.h>
 
-// Link with required libraries
-#pragma comment(lib, "Shcore.lib")
 
 namespace Edvar::Platform::Windows {
 

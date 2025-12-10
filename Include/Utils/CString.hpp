@@ -2,10 +2,14 @@
 namespace Edvar::I18N {
 class Locale;
 }
+namespace Edvar::Containers {
+struct FormatOpts;
+}
 namespace Edvar::Utils::CStrings {
 EDVAR_CPP_CORE_API int32_t Length(const char16_t* buffer);
 EDVAR_CPP_CORE_API int32_t Length(const wchar_t* buffer);
 EDVAR_CPP_CORE_API int32_t Length(const char* buffer);
+
 
 EDVAR_CPP_CORE_API int32_t SPrintF(char16_t* buffer, uint32_t bufferLength, const char16_t* format, ...);
 EDVAR_CPP_CORE_API char16_t* CreatePrintFString(const char16_t* format, ...);
@@ -39,7 +43,12 @@ EDVAR_CPP_CORE_API int32_t ToUtf32String(const char16_t* inString, char32_t* buf
 
 template <typename FromT, typename ToT>
 int32_t ConvertString(const FromT* inString, ToT* buffer, const int32_t bufferLength) {
-    if constexpr (std::is_same_v<ToT, char>) {
+    if constexpr (std::is_same_v<FromT, ToT>) {
+        if (inString != buffer && buffer != nullptr) {
+            Memory::CopyMemory(buffer, inString, bufferLength * sizeof(ToT));
+        }
+        return bufferLength;
+    } else if constexpr (std::is_same_v<ToT, char>) {
         return ToCharString(inString, buffer, bufferLength);
     } else if constexpr (std::is_same_v<ToT, wchar_t>) {
         return ToWCharString(inString, buffer, bufferLength);
@@ -118,8 +127,9 @@ EDVAR_CPP_CORE_API int32_t NumberToString(int64_t value, char16_t* buffer, int32
                                           NumberFormattingRule formattingRule = NumberFormattingRule());
 EDVAR_CPP_CORE_API int32_t NumberToString(uint64_t value, char16_t* buffer, int32_t bufferLength, int32_t base = 10,
                                           NumberFormattingRule formattingRule = NumberFormattingRule());
-EDVAR_CPP_CORE_API int32_t NumberToString(double value, char16_t* buffer, int32_t bufferLength, int32_t precision = 15,
-                                          NumberFormattingRule formattingRule = NumberFormattingRule());
+EDVAR_CPP_CORE_API int32_t FloatToString(double value, char16_t* buffer, int32_t bufferLength,
+                                         NumberFormattingRule formattingRule = NumberFormattingRule(),
+                                         bool* writtenDecimalPoint = nullptr);
 } // namespace Edvar::Utils::CStrings
 namespace Edvar {
 using NumberRoundingMode = Edvar::Utils::CStrings::NumberRoundingMode;

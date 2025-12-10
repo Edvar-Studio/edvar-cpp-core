@@ -14,6 +14,10 @@ public class IcuPkg : ModuleBase
         this.CppStandard = CppStandards.Cpp17;
         var sourceBase = Path.Join(context.ModuleDirectory.FullName, "source", "icu", "source", "tools", "icupkg");
 
+        if(context.Configuration is "debug"){
+            Console.WriteLine("ICU Pkg module will be compiled in debug mode");
+        }
+
         Includes.Private.Add("source/icu/source/common");
         Includes.Private.Add("source/icu/source/tools/toolutil");
 

@@ -527,7 +527,16 @@ inline Quaternion Quaternion::FromSwingTwist(const Quaternion& swing, const Quat
 // ============================================================================
 
 inline Containers::String Quaternion::ToString() const {
-    return Containers::String::PrintF(u"Quaternion(X: %.6f, Y: %.6f, Z: %.6f, W: %.6f)", X, Y, Z, W);
+    auto formatFloat = [](const float value) -> String {
+        return String::NumberToString(value, NumberFormattingRule{
+                                                 .UseGrouping = false,
+                                                 .AlwaysSign = false,
+                                                 .MinimumFractionalDigits = 3,
+                                                 .MaximumFractionalDigits = 6,
+                                             });
+    };
+    return Containers::String::PrintF(u"Quaternion(X: %.6f, Y: %.6f, Z: %.6f, W: %.6f)", formatFloat(X), formatFloat(Y),
+                                      formatFloat(Z), formatFloat(W));
 }
 
 inline Containers::String Quaternion::ToStringCompact() const {

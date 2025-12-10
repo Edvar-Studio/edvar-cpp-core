@@ -16,6 +16,10 @@ public class Icu : ModuleBase
             throw new Exception("Invalid DataMode for Icu module. Must be either 'static', 'shared' or 'common'.");
         }
 
+        if(context.Configuration is "debug"){
+            Console.WriteLine("All icu modules will be compiled in debug mode");
+        }
+
         // download the sources.
         {
             var psi = new ProcessStartInfo()

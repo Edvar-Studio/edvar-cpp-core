@@ -19,7 +19,9 @@ public class IcuToolUtil : ModuleBase
         Includes.Private.Add("source/icu/source/common");
         Includes.Private.Add("source/icu/source/i18n");
         Includes.Private.Add("source/icu/source/tools/toolutil");
-
+        if(context.Configuration is "debug"){
+            Console.WriteLine("ICU ToolUtil module will be compiled in debug mode");
+        }
         Definitions.Private.Add("U_TOOLUTIL_IMPLEMENTATION=1");
         if (context.Platform.Name == "windows")
         {

@@ -20,6 +20,10 @@ public class IcuI18N : ModuleBase
 
         var sourceBase = Path.Join(context.ModuleDirectory.FullName, "source", "icu", "source", "i18n");
 
+        if(context.Configuration is "debug"){
+            Console.WriteLine("ICU I18N module will be compiled in debug mode");
+        }
+
         Definitions.Private.Add("U_I18N_IMPLEMENTATION=1");
         if (context.Platform.Name == "windows")
         {

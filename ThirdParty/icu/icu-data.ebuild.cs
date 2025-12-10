@@ -72,6 +72,10 @@ public class IcuData : ModuleBase
 
         Directory.CreateDirectory(GetBinaryOutputDirectory());
 
+        if(context.Configuration is "debug"){
+            Console.WriteLine("ICU Data module will be compiled in debug mode");
+        }
+
         PackageType = context.SelfReference.GetOutput() switch
         {
             "static" => DataPackageType.Static,
@@ -84,11 +88,11 @@ public class IcuData : ModuleBase
         {
             if (context.Platform.Name == "windows")
             {
-                toLinkFile = Path.Join(context.ModuleDirectory.FullName, "Binaries", "icudt", "default", (PackageType == DataPackageType.Static ? "s" : string.Empty) + "icudt77" + context.Platform.ExtensionForStaticLibrary);
+                toLinkFile = Path.Join(context.ModuleDirectory.FullName, "Binaries", "icudt", context.Configuration, "default", (PackageType == DataPackageType.Static ? "s" : string.Empty) + "icudt77" + context.Platform.ExtensionForStaticLibrary);
             }
             else if (context.Platform.Name == "unix")
             {
-                toLinkFile = Path.Join(context.ModuleDirectory.FullName, "Binaries", "icudt", "default", "libicudt77" + context.Platform.ExtensionForStaticLibrary);
+                toLinkFile = Path.Join(context.ModuleDirectory.FullName, "Binaries", "icudt", context.Configuration, "default", "libicudt77" + context.Platform.ExtensionForStaticLibrary);
             }
             this.Libraries.Public.Add(toLinkFile);
         }
@@ -101,13 +105,13 @@ public class IcuData : ModuleBase
         // If these are not added to prebuild steps like this. The generation or other steps might take too much time.
         this.PreBuildSteps.Add(new ModuleBuildStep("Build icupkg", (workerType, cancellationToken) =>
         {
-            if (!File.Exists(Path.Join(context.ModuleDirectory.FullName, "Binaries", "icupkg", "default", "icupkg" + context.Platform.ExtensionForExecutable)))
+            if (!File.Exists(Path.Join(context.ModuleDirectory.FullName, "Binaries", "icupkg", context.Configuration, "default", "icupkg" + context.Platform.ExtensionForExecutable)))
             {
                 Console.WriteLine("icupkg not found, building icupkg first.");
                 var processStartArgs = new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = "dotnet",
-                    Arguments = $"\"{ebuildPath}\" build {Path.Join(context.ModuleDirectory.FullName, "icu-icupkg.ebuild.cs")} -p {MaxDependencyCompilationProcesses}",
+                    Arguments = $"\"{ebuildPath}\" build {Path.Join(context.ModuleDirectory.FullName, "icu-icupkg.ebuild.cs")} -p {MaxDependencyCompilationProcesses} -c \"{context.Configuration}\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -130,7 +134,7 @@ public class IcuData : ModuleBase
                 Directory.CreateDirectory(Path.Join(context.ModuleDirectory.FullName, "temp", "pack_contents"));
                 var processStartArgs = new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = Path.Join(context.ModuleDirectory.FullName, "Binaries", "icupkg", "default", "icupkg" + context.Platform.ExtensionForExecutable),
+                    FileName = Path.Join(context.ModuleDirectory.FullName, "Binaries", "icupkg", context.Configuration, "default", "icupkg" + context.Platform.ExtensionForExecutable),
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     StandardOutputEncoding = System.Text.Encoding.UTF8,
@@ -169,13 +173,13 @@ public class IcuData : ModuleBase
         this.PreBuildSteps.Add(new ModuleBuildStep("Build pkgdata", (workerType, cancellationToken) =>
         {
             // pkgdata
-            if (!File.Exists(Path.Join(context.ModuleDirectory.FullName, "Binaries", "pkgdata", "default", "pkgdata" + context.Platform.ExtensionForExecutable)))
+            if (!File.Exists(Path.Join(context.ModuleDirectory.FullName, "Binaries", "pkgdata", context.Configuration, "default", "pkgdata" + context.Platform.ExtensionForExecutable)))
             {
                 Console.WriteLine("pkgdata not found, building pkgdata first.");
                 var processStartArgs = new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = "dotnet",
-                    Arguments = $"\"{ebuildPath}\" build {Path.Join(context.ModuleDirectory.FullName, "icu-pkgdata.ebuild.cs")} -p {MaxDependencyCompilationProcesses}",
+                    Arguments = $"\"{ebuildPath}\" build {Path.Join(context.ModuleDirectory.FullName, "icu-pkgdata.ebuild.cs")} -p {MaxDependencyCompilationProcesses} -c \"{context.Configuration}\"",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -197,7 +201,7 @@ public class IcuData : ModuleBase
                 Console.WriteLine("icu data library not found, building icu data library.");
                 var processStartArgs = new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = Path.Join(context.ModuleDirectory.FullName, "Binaries", "pkgdata", "default", "pkgdata" + context.Platform.ExtensionForExecutable),
+                    FileName = Path.Join(context.ModuleDirectory.FullName, "Binaries", "pkgdata", context.Configuration, "default", "pkgdata" + context.Platform.ExtensionForExecutable),
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     StandardOutputEncoding = System.Text.Encoding.UTF8,
@@ -217,7 +221,7 @@ public class IcuData : ModuleBase
                     },
                     "-v",
                     "-d",
-                    Path.Join(context.ModuleDirectory.FullName, "Binaries","icudt", "default"),
+                    Path.Join(context.ModuleDirectory.FullName, "Binaries","icudt", context.Configuration, "default"),
                     "-s",
                     Path.Join(context.ModuleDirectory.FullName, "temp", "pack_contents"),
                     "-p",
@@ -238,6 +242,11 @@ public class IcuData : ModuleBase
                         Architecture.Arm => "arm",
                         _ => throw new Exception("Invalid architecture.")
                     });
+                    if(context.Configuration is "debug")
+                    {
+                        argumentList.Add("-O");
+                        argumentList.Add("debug");
+                    }
                 }
                 argumentList.Add(Path.Join(context.ModuleDirectory.FullName, "temp", "pack_contents.lst"));
                 foreach (var arg in argumentList)

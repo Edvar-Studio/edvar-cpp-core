@@ -34,6 +34,10 @@ public class IcuPkgData : ModuleBase
         Dependencies.Private.Add("static:icu-common");
         Dependencies.Private.Add("static:icu-stubdata");
 
+        if(context.Configuration is "debug"){
+            Console.WriteLine("ICU PkgData module will be compiled in debug mode");
+        }
+
         var sourceBase = Path.Join(context.ModuleDirectory.FullName, "source", "icu", "source", "tools", "pkgdata");
 
         // // patch source to allow compiling with a cpp compiler.

@@ -10,6 +10,8 @@ class EdvarCppCore : ModuleBase
     public bool AllowSimd = true;
     [ModuleOption(ChangesResultBinary = true, Name = "enable-avx", Description = "Enable or disable AVX optimizations in math library")]
     public bool EnableAvx = true;
+    [ModuleOption(ChangesResultBinary = true, Name = "debug-trace-allocators", Description = "Enable or disable tracing of allocators in debug mode")]
+    public bool DebugTraceAllocators = false;
 
     public EdvarCppCore(ModuleContext context) : base(context)
     {
@@ -33,6 +35,11 @@ class EdvarCppCore : ModuleBase
         this.Definitions.Private.Add($"EDVAR_CPP_CORE_MATH_ALLOW_SIMD={(this.AllowSimd ? 1 : 0)}");
         this.Definitions.Private.Add($"EDVAR_CPP_CORE_MATH_ALLOW_SIMD_AVX={(this.EnableAvx ? 1 : 0)}");
 
+        if(this.DebugTraceAllocators && context.Configuration == "debug")
+        {
+            this.Definitions.Public.Add("EDVAR_CPP_CORE_ALLOCATOR_TRACING=1");
+        }
+
         if (context.Toolchain.Name == "msvc")
         {
             this.Definitions.Private.Add("UNICODE");
@@ -50,6 +57,7 @@ class EdvarCppCore : ModuleBase
             this.Libraries.Private.Add("Xinput.lib");
             this.Libraries.Private.Add("d3d12.lib");
             this.Libraries.Private.Add("dxgi.lib");
+            this.Libraries.Private.Add("Shcore.lib");
         }
         else if (context.Platform.Name == "linux")
         {

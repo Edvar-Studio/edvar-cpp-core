@@ -1,9 +1,5 @@
 #pragma once
 
-namespace Edvar::Memory {
-class IMemoryAllocator;
-}
-
 namespace Edvar::Platform {
 
 /**
@@ -27,7 +23,6 @@ public:
     virtual void OnFatalError(const char16_t* message);
     virtual void PrintMessageToDebugger(const char16_t* message);
 
-    [[nodiscard]] virtual Memory::IMemoryAllocator* GetAllocator() const;
     [[nodiscard]] virtual IPlatformThreading& GetThreading() const = 0;
     [[nodiscard]] virtual IPlatformWindowing& GetWindowing() const = 0;
     [[nodiscard]] virtual IPlatformInput& GetInput() const = 0;

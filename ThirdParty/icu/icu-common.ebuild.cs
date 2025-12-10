@@ -2,10 +2,6 @@ namespace thirdparty.icu;
 
 using ebuild.api;
 
-
-
-
-
 public class IcuCommon : ModuleBase
 {
     public IcuCommon(ModuleContext context) : base(context)
@@ -16,6 +12,10 @@ public class IcuCommon : ModuleBase
         this.UseVariants = false;
         this.CppStandard = CppStandards.Cpp20;
         var sourceBase = Path.Join(context.ModuleDirectory.FullName, "source", "icu", "source", "common");
+
+        if(context.Configuration is "debug"){
+            Console.WriteLine("ICU Common module will be compiled in debug mode");
+        }
 
         Definitions.Private.Add("U_COMMON_IMPLEMENTATION=1");
         if (context.Platform.Name == "windows")

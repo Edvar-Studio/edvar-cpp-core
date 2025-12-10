@@ -6,6 +6,14 @@
 
 #    include <windows.h>
 
+
+
+
+
+
+// TODO: Temporary - Remove later
+#    include <cwchar>
+
 namespace Edvar::Platform::Windows {
 IPlatformThreading& WindowsPlatform::GetThreading() const {
     static WindowsPlatformThreading threading;
@@ -21,11 +29,14 @@ IPlatformInput& WindowsPlatform::GetInput() const {
     static WindowsPlatformInput input;
     return input;
 }
+
 void WindowsPlatform::PrintMessageToDebugger(const char16_t* message) {
     const int32_t bufferSize = Utils::CStrings::ToWCharString(message, nullptr, 0) + 1;
     auto* buffer = new wchar_t[bufferSize];
     Utils::CStrings::ToWCharString(message, buffer, bufferSize);
     OutputDebugStringW(buffer);
+    wprintf(buffer);
+    OutputDebugStringW(L"\n");
     delete[] buffer;
 }
 } // namespace Edvar::Platform::Windows
