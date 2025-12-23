@@ -1,20 +1,22 @@
-#include "Rendering/RenderingCore.hpp"
-#include "Rendering/IRenderDevice.hpp"
+#include "Renderer/RHI/RenderingCore.hpp"
+
+#include "Renderer/CommandContext.hpp"
+#include "Renderer/RHI/IRenderDevice.hpp"
 #ifdef _WIN32
-#    include "Rendering/D3D12/D3D12RenderingAPI.hpp"
+#    include "Renderer/RHI/D3D12/D3D12RenderingAPI.hpp"
 #else
 #    include "Rendering/Vulkan/VulkanRenderingAPI.hpp"
 #endif
-namespace Edvar::Rendering {
+namespace Edvar::Renderer::RHI {
 SharedPointer<IRenderingAPI> IRenderingAPI::ActiveAPI;
 IRenderDeviceDependent::~IRenderDeviceDependent() {
     if (associatedDevice.IsValid()) [[likely]] {
-        associatedDevice->dependents.Remove(AsShared());
+        associatedDevice->dependents.Remove(this);
     }
 }
 IRenderDeviceDependent::IRenderDeviceDependent(const SharedReference<IRenderDevice>& device)
     : associatedDevice(device) {
-    device->dependents.Add(AsShared());
+    device->dependents.Add(this);
 }
 SharedReference<IRenderDevice> IRenderDeviceDependent::GetAssociatedDevice() const { return associatedDevice; }
 void IRenderDeviceDependent::CheckDeviceSanity() const { GetAssociatedDevice()->DoCheckDeviceSanity(); }
@@ -63,14 +65,15 @@ Utils::MultiDelegate<void(SharedReference<IRenderDevice>)> IRenderingAPI::OnRend
     return delegate;
 }
 void IRenderingAPI::NotifyRenderDeviceLost(const IRenderDevice& lostDevice) {
+    CommandContextManager::Get().FlushAll();
     OnRenderDeviceLost().Broadcast(lostDevice.AsShared());
     // Attempt to recreate the primary device.
     GetActiveAPI()->PrimaryDevice->Destroy();
     GetActiveAPI()->PrimaryDevice = GetActiveAPI()->CreatePrimaryRenderDevice();
     if (!GetActiveAPI()->PrimaryDevice) {
-        Platform::Get().OnFatalError(u"RenderingAPI: Failed to restore lost render device.");
+        Platform::GetPlatform().OnFatalError(u"RenderingAPI: Failed to restore lost render device.");
         return;
     }
     OnRenderDeviceRestored().Broadcast(GetActiveAPI()->PrimaryDevice.ToSharedReference());
 }
-} // namespace Edvar::Rendering
+} // namespace Edvar::Renderer::RHI

@@ -22,6 +22,8 @@ struct Color {
           B(static_cast<uint8_t>(Math::Clamp(b * 255.0f, 0.0f, 255.0f))),
           A(static_cast<uint8_t>(Math::Clamp(a * 255.0f, 0.0f, 255.0f))) {}
 
+    static Color Black;
+
     LinearColor ToLinearColor() const;
 
     static Color FromHex(const String& hexString) {
@@ -106,4 +108,6 @@ inline LinearColor Color::ToLinearColor() const {
     }
     return returnColor;
 }
+
+inline Color Color::Black = Color(0, 0, 0, 1.f);
 } // namespace Edvar::Math

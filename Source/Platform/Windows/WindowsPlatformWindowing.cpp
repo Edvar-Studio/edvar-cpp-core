@@ -2,12 +2,11 @@
 #include "Platform/Windows/WindowsPlatformInput.hpp"
 #include "Windowing/Window.hpp"
 #define WIN32_LEAN_AND_MEAN
-#include "Rendering/RenderingCore.hpp"
+#include "Renderer/RHI/RenderingCore.hpp"
 
 #include <windows.h>
 #include <windowsx.h>
 #include <shellscalingapi.h>
-
 
 namespace Edvar::Platform::Windows {
 
@@ -56,7 +55,7 @@ const MonitorInfo& WindowsPlatformWindowing::GetPrimaryMonitor() { return Primar
 IWindowImplementation& WindowsPlatformWindowing::CreateWindow(const Windowing::WindowDescriptor& descriptor) {
 #pragma pop_macro("CreateWindow")
     if (!WindowClassRegistered) {
-        Platform::Get().PrintMessageToDebugger(u"Registering window class.");
+        Platform::GetPlatform().PrintMessageToDebugger(u"Registering window class.\n");
         RegisterWindowClass();
     }
 
@@ -94,9 +93,46 @@ IWindowImplementation& WindowsPlatformWindowing::CreateWindow(const Windowing::W
     }
     const Math::Vector2i position = descriptor.Position.GetOrDefault(Math::Vector2i(CW_USEDEFAULT));
     const Math::Vector2i size = descriptor.Size.GetOrDefault(Math::Vector2i(CW_USEDEFAULT));
-    // Adjust window rect for client area
-    RECT rect = {position.X, position.Y, position.X + size.X, position.Y + size.Y};
-    AdjustWindowRectEx(&rect, style, FALSE, exStyle);
+
+    // Handle CW_USEDEFAULT sentinel values correctly. CW_USEDEFAULT is a
+    // sentinel that must be passed directly to CreateWindowEx; it must not be
+    // used in arithmetic (adding it to size/position will overflow/produce
+    // invalid rects). Compute x/y/width/height separately and only call
+    // AdjustWindowRectEx when we have explicit width/height values.
+    int x = position.X;
+    int y = position.Y;
+    int width = size.X;
+    int height = size.Y;
+
+    bool posXDefault = (position.X == CW_USEDEFAULT);
+    bool posYDefault = (position.Y == CW_USEDEFAULT);
+    bool sizeXDefault = (size.X == CW_USEDEFAULT);
+    bool sizeYDefault = (size.Y == CW_USEDEFAULT);
+
+    if (!(sizeXDefault || sizeYDefault)) {
+        // We have explicit client size; adjust for window decorations
+        RECT wr = {0, 0, size.X, size.Y};
+        AdjustWindowRectEx(&wr, style, FALSE, exStyle);
+        width = wr.right - wr.left;
+        height = wr.bottom - wr.top;
+    } else {
+        // If size is CW_USEDEFAULT for either dimension, pass CW_USEDEFAULT
+        // through to CreateWindowEx; do not call AdjustWindowRectEx with the
+        // sentinel value.
+        if (sizeXDefault) {
+            width = CW_USEDEFAULT;
+        }
+        if (sizeYDefault) {
+            height = CW_USEDEFAULT;
+        }
+    }
+
+    // If position is not default, leave x/y as-is. If position is default,
+    // keep CW_USEDEFAULT so CreateWindowEx chooses a default location.
+    if (posXDefault)
+        x = CW_USEDEFAULT;
+    if (posYDefault)
+        y = CW_USEDEFAULT;
 
     // Convert title to wide string
     // Assume wchar_t is the same size as char16_t
@@ -105,12 +141,13 @@ IWindowImplementation& WindowsPlatformWindowing::CreateWindow(const Windowing::W
     const auto* title = reinterpret_cast<const wchar_t*>(descriptor.Title.Data());
 
     // Create the window
-    HWND hwnd = CreateWindowExW(exStyle, L"EdvarWindowClass", title, style, rect.left, rect.top, rect.right - rect.left,
-                                rect.bottom - rect.top, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
-    Platform::Get().PrintMessageToDebugger(*String::PrintF(u"Created window with handle: %p", hwnd));
+    HWND hwnd = CreateWindowExW(exStyle, L"EdvarWindowClass", title, style, x, y, width, height, nullptr, nullptr,
+                                GetModuleHandleW(nullptr), nullptr);
     if (!hwnd) {
-        Platform::Get().OnFatalError(u"Failed to create window");
+        Platform::GetPlatform().OnFatalError(u"Failed to create window");
         // Create a dummy window to return
+    } else {
+        Platform::GetPlatform().PrintMessageToDebugger(*String::Format(u"Created window with handle: {}", hwnd));
     }
 
     // Create WindowsWindow instance
@@ -123,7 +160,9 @@ IWindowImplementation& WindowsPlatformWindowing::CreateWindow(const Windowing::W
     }
 
     // Store pointer in window user data for message routing
-    SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(window));
+    if (hwnd) {
+        SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(window));
+    }
 
     return *window;
 }
@@ -164,7 +203,7 @@ void WindowsPlatformWindowing::RegisterWindowClass() {
     wc.lpszClassName = L"EdvarWindowClass";
 
     if (!RegisterClassExW(&wc)) {
-        Platform::Get().OnFatalError(u"Failed to register window class");
+        Platform::GetPlatform().OnFatalError(u"Failed to register window class");
     }
 
     WindowClassRegistered = true;
@@ -383,7 +422,7 @@ void WindowsWindow::HandleMonitorChange() { UpdateMonitorInfo(); }
 bool WindowsWindow::OutputSupportsHDR() {
     if (OwnerWrapper) {
         UpdateMonitorInfo();
-        return Rendering::IRenderingAPI::GetActiveAPI()->DoesOutputSupportHDR(CurrentMonitor);
+        return Renderer::RHI::IRenderingAPI::GetActiveAPI()->DoesOutputSupportHDR(CurrentMonitor);
     }
     return false;
 }
@@ -433,7 +472,7 @@ int64_t WindowsWindow::WindowProc(uint32_t msg, uint64_t wParam, int64_t lParam)
     case WM_KEYDOWN:
     case WM_KEYUP: {
         // Route to input system - it will call our HandleKeyEvent
-        auto& input = static_cast<Windows::WindowsPlatformInput&>(Platform::Get().GetInput());
+        auto& input = static_cast<Windows::WindowsPlatformInput&>(Platform::GetPlatform().GetInput());
         if (WindowsKeyboardDevice* keyboard = input.GetPrimaryKeyboard()) {
             int32_t keyCode = static_cast<int32_t>(wParam);
             bool isDown = (msg == WM_KEYDOWN);
@@ -445,7 +484,7 @@ int64_t WindowsWindow::WindowProc(uint32_t msg, uint64_t wParam, int64_t lParam)
 
     case WM_CHAR: {
         // Route to input system - it will call our HandleTextInput
-        auto& input = static_cast<Windows::WindowsPlatformInput&>(Platform::Get().GetInput());
+        auto& input = static_cast<Windows::WindowsPlatformInput&>(Platform::GetPlatform().GetInput());
         if (WindowsKeyboardDevice* keyboard = input.GetPrimaryKeyboard()) {
             wchar_t ch = static_cast<wchar_t>(wParam);
             Containers::String text(reinterpret_cast<const char16_t*>(&ch), 1);
@@ -472,11 +511,31 @@ int64_t WindowsWindow::WindowProc(uint32_t msg, uint64_t wParam, int64_t lParam)
 
         bool isDown = (msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN || msg == WM_MBUTTONDOWN);
 
+        if (isDown) {
+            HWND hwnd = static_cast<HWND>(NativeHandle);
+
+            if (!Focused) {
+                DWORD currentThread = GetCurrentThreadId();
+                DWORD foregroundThread = GetWindowThreadProcessId(GetForegroundWindow(), nullptr);
+                if (currentThread != foregroundThread) {
+                    AttachThreadInput(currentThread, foregroundThread, TRUE);
+                }
+
+                SetForegroundWindow(hwnd);
+                SetFocus(hwnd);
+
+                if (currentThread != foregroundThread) {
+                    AttachThreadInput(currentThread, foregroundThread, FALSE);
+                }
+            }
+        }
+
         // Route to input system - it will call our HandleMouseButton
-        auto& input = static_cast<Windows::WindowsPlatformInput&>(Platform::Get().GetInput());
+        auto& input = static_cast<Windows::WindowsPlatformInput&>(Platform::GetPlatform().GetInput());
         if (WindowsMouseDevice* mouse = input.GetPrimaryMouse()) {
             mouse->ProcessButtonMessage(this, button, isDown);
         }
+
         return 0;
     }
 
@@ -484,7 +543,7 @@ int64_t WindowsWindow::WindowProc(uint32_t msg, uint64_t wParam, int64_t lParam)
         Math::Vector2<int32_t> currentPos(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
 
         // Route to input system - it will call our HandleMouseMove
-        auto& input = static_cast<Windows::WindowsPlatformInput&>(Platform::Get().GetInput());
+        auto& input = static_cast<Windows::WindowsPlatformInput&>(Platform::GetPlatform().GetInput());
         if (WindowsMouseDevice* mouse = input.GetPrimaryMouse()) {
             mouse->ProcessMoveMessage(this, currentPos);
         }
@@ -498,7 +557,7 @@ int64_t WindowsWindow::WindowProc(uint32_t msg, uint64_t wParam, int64_t lParam)
         float wheelDelta = static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam)) / WHEEL_DELTA;
 
         // Route to input system - it will call our HandleMouseWheel
-        auto& input = static_cast<Windows::WindowsPlatformInput&>(Platform::Get().GetInput());
+        auto& input = static_cast<Windows::WindowsPlatformInput&>(Platform::GetPlatform().GetInput());
         if (WindowsMouseDevice* mouse = input.GetPrimaryMouse()) {
             mouse->ProcessWheelMessage(this, wheelDelta);
         }

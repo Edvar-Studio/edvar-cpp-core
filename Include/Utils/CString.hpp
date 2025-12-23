@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿
+#pragma once
 namespace Edvar::I18N {
 class Locale;
 }
@@ -9,12 +10,6 @@ namespace Edvar::Utils::CStrings {
 EDVAR_CPP_CORE_API int32_t Length(const char16_t* buffer);
 EDVAR_CPP_CORE_API int32_t Length(const wchar_t* buffer);
 EDVAR_CPP_CORE_API int32_t Length(const char* buffer);
-
-
-EDVAR_CPP_CORE_API int32_t SPrintF(char16_t* buffer, uint32_t bufferLength, const char16_t* format, ...);
-EDVAR_CPP_CORE_API char16_t* CreatePrintFString(const char16_t* format, ...);
-EDVAR_CPP_CORE_API int32_t FPrintF(const void* file, const char16_t* format, ...);
-EDVAR_CPP_CORE_API void PrintF(const char16_t* format, ...);
 
 EDVAR_CPP_CORE_API int32_t ToCharString(const wchar_t* inString, char* buffer, int32_t bufferLength);
 EDVAR_CPP_CORE_API int32_t ToCharString(const char8_t* inString, char* buffer, int32_t bufferLength);
@@ -44,8 +39,14 @@ EDVAR_CPP_CORE_API int32_t ToUtf32String(const char16_t* inString, char32_t* buf
 template <typename FromT, typename ToT>
 int32_t ConvertString(const FromT* inString, ToT* buffer, const int32_t bufferLength) {
     if constexpr (std::is_same_v<FromT, ToT>) {
-        if (inString != buffer && buffer != nullptr) {
-            Memory::CopyMemory(buffer, inString, bufferLength * sizeof(ToT));
+        if (inString == nullptr) {
+            return -1;
+        }
+        if (bufferLength <= 0) { // just return the required length
+            return Length(inString) + 1;
+        }
+        if (inString != buffer) {
+            Memory::CopyMemory(buffer, inString, bufferLength);
         }
         return bufferLength;
     } else if constexpr (std::is_same_v<ToT, char>) {
@@ -105,9 +106,12 @@ struct NumberFormattingRule {
     // Only for base 10 numbers
     bool UseGrouping = true;
     bool AlwaysSign = false;
+    bool UseAlternateForm = false; // e.g., for hex numbers, prefix with 0x
     NumberRoundingMode RoundingMode = NumberRoundingMode::HalfToEven;
+    // Number of minimum integral digits. On hex numbers, this indicates minimum width.
     int32_t MinimumIntegralDigits = 1;
-    int32_t MaximumIntegralDigits = INT32_MAX;
+    // Max number of integral digits. [0, 999]
+    int32_t MaximumIntegralDigits = 999;
     // Only for floating point numbers
     int32_t MinimumFractionalDigits = 0;
     // Only for floating point numbers
@@ -118,18 +122,19 @@ struct NumberFormattingRule {
      * Only for floating point numbers
      * Use scientific notation if the value is >= 10^Threshold or < 10^-Threshold.
      */
-    int ScientificNotationThreshold = 10;
+    bool UseScientificNotation = false;
     // Locale to use for formatting.
-    const I18N::Locale* Locale;
+    const I18N::Locale* Locale = nullptr;
 };
 
-EDVAR_CPP_CORE_API int32_t NumberToString(int64_t value, char16_t* buffer, int32_t bufferLength, int32_t base = 10,
-                                          NumberFormattingRule formattingRule = NumberFormattingRule());
-EDVAR_CPP_CORE_API int32_t NumberToString(uint64_t value, char16_t* buffer, int32_t bufferLength, int32_t base = 10,
-                                          NumberFormattingRule formattingRule = NumberFormattingRule());
+EDVAR_CPP_CORE_API int32_t NumberToString(int64_t value, char16_t* buffer, int32_t bufferLength,
+                                          const NumberFormattingRule& formattingRule = NumberFormattingRule());
 EDVAR_CPP_CORE_API int32_t FloatToString(double value, char16_t* buffer, int32_t bufferLength,
-                                         NumberFormattingRule formattingRule = NumberFormattingRule(),
-                                         bool* writtenDecimalPoint = nullptr);
+                                         const NumberFormattingRule& formattingRule = NumberFormattingRule());
+
+EDVAR_CPP_CORE_API int32_t DataToHexString(uint64_t value, char16_t* buffer, int32_t bufferLength,
+                                           bool upperCase = false, bool prefix0x = false, int32_t minWidth = 1,
+                                           char16_t paddingChar = u'0');
 } // namespace Edvar::Utils::CStrings
 namespace Edvar {
 using NumberRoundingMode = Edvar::Utils::CStrings::NumberRoundingMode;

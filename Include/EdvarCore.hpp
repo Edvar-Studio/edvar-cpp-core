@@ -30,9 +30,29 @@
 #    define EDVAR_CPP_CORE_FORCE_INLINE inline
 #endif
 
-#include <cstdint>                                    // IWYU pragma: export
-#include <type_traits>                                // IWYU pragma: export
-#include <utility>                                    // IWYU pragma: export
+#include <cstdint>     // IWYU pragma: export
+#include <type_traits> // IWYU pragma: export
+#include <utility>     // IWYU pragma: export
+#define EDVAR_CPP_CORE_ENUM_FLAG_OPERATORS(EnumType)                                                                   \
+    inline EnumType operator|(EnumType a, EnumType b) {                                                                \
+        return static_cast<EnumType>(static_cast<std::underlying_type_t<EnumType>>(a) |                                \
+                                     static_cast<std::underlying_type_t<EnumType>>(b));                                \
+    }                                                                                                                  \
+    inline EnumType& operator|=(EnumType& a, EnumType b) {                                                             \
+        a = a | b;                                                                                                     \
+        return a;                                                                                                      \
+    }                                                                                                                  \
+    inline EnumType operator&(EnumType a, EnumType b) {                                                                \
+        return static_cast<EnumType>(static_cast<std::underlying_type_t<EnumType>>(a) &                                \
+                                     static_cast<std::underlying_type_t<EnumType>>(b));                                \
+    }                                                                                                                  \
+    inline EnumType& operator&=(EnumType& a, EnumType b) {                                                             \
+        a = a & b;                                                                                                     \
+        return a;                                                                                                      \
+    }                                                                                                                  \
+    inline EnumType operator~(EnumType a) {                                                                            \
+        return static_cast<EnumType>(~static_cast<std::underlying_type_t<EnumType>>(a));                               \
+    }
 #include "Memory/MemoryAllocator.hpp"                 // IWYU pragma: export
 #include "Utils/Optional.hpp"                         // IWYU pragma: export
 #include "Containers/Allocators/DefaultAllocator.hpp" // IWYU pragma: export
@@ -42,9 +62,11 @@ template <typename DataT, typename AllocatorT = Allocators::DefaultAllocator<Dat
 using String = Edvar::Containers::StringBase<char16_t>;
 } // namespace Edvar::Containers
 using String = Edvar::Containers::String;
-#include "Utils/Meta.hpp"      // IWYU pragma: export
-#include "Memory/Ops.hpp"      // IWYU pragma: export
-#include "Threading/Mutex.hpp" // IWYU pragma: export
+
+#include "Platform/IPlatform.hpp" // IWYU pragma: export
+#include "Utils/Meta.hpp"         // IWYU pragma: export
+#include "Memory/Ops.hpp"         // IWYU pragma: export
+#include "Threading/Mutex.hpp"    // IWYU pragma: export
 
 #include "Containers/List.hpp"   // IWYU pragma: export
 #include "Containers/String.hpp" // IWYU pragma: export
@@ -60,9 +82,8 @@ using String = Edvar::Containers::String;
 
 #include "I18N/Locale.hpp"      // IWYU pragma: export
 #include "Utils/Functional.hpp" // IWYU pragma: export
+#include "Utils/Guid.hpp"       // IWYU pragma: export
 
-
-
-
-
-#include "Containers/String.inl"
+// implementation .inl files
+#include "Containers/String.inl" // IWYU pragma: export
+#include "Containers/List.inl"   // IWYU pragma: export

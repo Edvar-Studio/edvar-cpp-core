@@ -7,7 +7,7 @@ void IWindowImplementation::HandleClose(int32_t priorityLevel) {
         OwnerWrapper->OnClose(priorityLevel);
     } else [[unlikely]] {
         // If no wrapper is present, destroy the window immediately.
-        Platform::Get().GetWindowing().DestroyWindow(*this);
+        Platform::GetPlatform().GetWindowing().DestroyWindow(*this);
     }
 }
 

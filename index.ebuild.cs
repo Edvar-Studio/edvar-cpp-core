@@ -12,6 +12,8 @@ class EdvarCppCore : ModuleBase
     public bool EnableAvx = true;
     [ModuleOption(ChangesResultBinary = true, Name = "debug-trace-allocators", Description = "Enable or disable tracing of allocators in debug mode")]
     public bool DebugTraceAllocators = false;
+    [ModuleOption(ChangesResultBinary=true, Name="debug-graphics-api", Description="Enable or disable debug graphics API validation layers and debug utilities")]
+    public bool DebugGraphicsApi = true;
 
     public EdvarCppCore(ModuleContext context) : base(context)
     {
@@ -38,6 +40,10 @@ class EdvarCppCore : ModuleBase
         if(this.DebugTraceAllocators && context.Configuration == "debug")
         {
             this.Definitions.Public.Add("EDVAR_CPP_CORE_ALLOCATOR_TRACING=1");
+        }
+        if(this.DebugGraphicsApi && context.Configuration == "debug")
+        {
+            this.Definitions.Public.Add("EDVAR_CPP_CORE_GRAPHICS_API_DEBUG=1");
         }
 
         if (context.Toolchain.Name == "msvc")

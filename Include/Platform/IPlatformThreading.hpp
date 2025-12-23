@@ -45,12 +45,12 @@ public:
     bool ShouldBeKilled() const { return ShouldKill; }
 
     [[nodiscard]] static IThreadImplementation& GetCurrentThread() {
-        return Platform::Get().GetThreading().GetCurrentThread();
+        return Platform::GetPlatform().GetThreading().GetCurrentThread();
     }
 
     [[nodiscard]] static IThreadImplementation& Create(const Containers::String& name, int32_t (*threadFunction)(void*),
                                                        void* arg) {
-        return Platform::Get().GetThreading().CreateThread(name, threadFunction, arg);
+        return Platform::GetPlatform().GetThreading().CreateThread(name, threadFunction, arg);
     }
 
     virtual ~IThreadImplementation() = default;

@@ -1,6 +1,6 @@
 #pragma once
 
-namespace Edvar::Rendering {
+namespace Edvar::Renderer::RHI {
 enum class ResourceDataFormat : int32_t {
     Unknown,
     /**

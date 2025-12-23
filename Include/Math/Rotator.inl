@@ -389,14 +389,14 @@ inline double Rotator::AngularDifference(double angle1, double angle2) {
 // ============================================================================
 
 inline Containers::String Rotator::ToString() const {
-    return Containers::String::PrintF(
-        u"Rotator(Pitch: %.3f°, Yaw: %.3f°, Roll: %.3f°)",
+    return Containers::String::Format(
+        u"Rotator(Pitch: {;p=3}, {;p=3}, {;p=3})",
         Pitch, Yaw, Roll
     );
 }
 
 inline Containers::String Rotator::ToStringCompact() const {
-    return Containers::String::PrintF(u"R(%.1f°, %.1f°, %.1f°)", Pitch, Yaw, Roll);
+    return Containers::String::Format(u"R({;p=1}, {;p=1}, {;p=1})", Pitch, Yaw, Roll);
 }
 
 // ============================================================================

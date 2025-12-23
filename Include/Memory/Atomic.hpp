@@ -30,10 +30,10 @@ template <typename ValueT> class Atomic {
 public:
     Atomic() {
 #if !EDVAR_MEMORY_PLATFORM_ATOMIC_SUPPORTED
-        mutex = &Platform::Get().GetThreading().CreateMutex();
+        mutex = &Platform::GetPlatform().GetThreading().CreateMutex();
 #endif
     }
-    explicit Atomic(const ValueT& initialValue) : Atomic() { storage = initialValue; }
+    Atomic(const ValueT& initialValue) : Atomic() { storage = initialValue; }
 
     ~Atomic() {
 #if !EDVAR_MEMORY_PLATFORM_ATOMIC_SUPPORTED

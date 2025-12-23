@@ -2,26 +2,53 @@
 #include "Threading/Mutex.hpp"
 #include "Utils/CString.hpp"
 #include "unicode/locid.h"
+#include "unicode/uclean.h"
+#include "unicode/udata.h"
 
 namespace Edvar::I18N {
 
 Containers::List<Locale*> Locale::createdLocales;
 Threading::Mutex Locale::createdLocalesMutex;
 
+extern "C" const char U_ICUDATA_ENTRY_POINT[];
+
+static struct AutoInitICU {
+    AutoInitICU() {
+        // Initialize ICU
+        UErrorCode errorCode = U_ZERO_ERROR;
+        if (udata_setCommonData(&U_ICUDATA_ENTRY_POINT, &errorCode); U_FAILURE(errorCode)) {
+            const char* errorName = u_errorName(errorCode);
+            Platform::GetPlatform().PrintMessageToDebugger(u"Error setting ICU common data: \n");
+            const auto* converted = Utils::CStrings::CreateConvertedString<char16_t>(errorName);
+            Platform::GetPlatform().PrintMessageToDebugger(converted);
+            delete[] converted;
+        }
+        errorCode = U_ZERO_ERROR;
+        u_init(&errorCode);
+        if (U_FAILURE(errorCode)) {
+            const char* errorName = u_errorName(errorCode);
+            Platform::GetPlatform().PrintMessageToDebugger(u"Error initializing ICU: \n");
+            const auto* converted = Utils::CStrings::CreateConvertedString<char16_t>(errorName);
+            Platform::GetPlatform().PrintMessageToDebugger(converted);
+            delete[] converted;
+        }
+    }
+} autoInitICUInstance;
+
 Locale::Locale(const char16_t* language, const char16_t* country, const char16_t* variant, bool addToRegistry) {
     char *langBuffer = nullptr, *countryBuffer = nullptr, *variantBuffer = nullptr;
     if (language != nullptr) {
-        uint32_t langBufferLen = Utils::CStrings::ToCharString(language, nullptr, 0);
+        const int32_t langBufferLen = Utils::CStrings::ToCharString(language, nullptr, 0);
         langBuffer = new char[langBufferLen];
         Utils::CStrings::ToCharString(language, langBuffer, langBufferLen);
     }
     if (country != nullptr) {
-        uint32_t countryLen = Utils::CStrings::ToCharString(country, nullptr, 0);
+        const int32_t countryLen = Utils::CStrings::ToCharString(country, nullptr, 0);
         countryBuffer = new char[countryLen];
         Utils::CStrings::ToCharString(country, countryBuffer, countryLen);
     }
     if (variant != nullptr) {
-        uint32_t variantLen = Utils::CStrings::ToCharString(variant, nullptr, 0);
+        const int32_t variantLen = Utils::CStrings::ToCharString(variant, nullptr, 0);
         variantBuffer = new char[variantLen];
         Utils::CStrings::ToCharString(variant, variantBuffer, variantLen);
     }
@@ -42,21 +69,21 @@ Locale::~Locale() {
 }
 const Locale* Locale::Find(const char16_t* language, const char16_t* country, const char16_t* variant) {
     // try to find in existing locales
-    Locale tempLocale(language, country, variant, false);
+    const Locale tempLocale(language, country, variant, false);
     if (tempLocale.icuLocale == nullptr)
         return nullptr;
     Threading::ScopedLock lock(createdLocalesMutex);
     for (int i = 0; i < createdLocales.Length(); ++i) {
-        Locale* locale = createdLocales.Get(i);
+        const Locale* locale = createdLocales.Get(i);
         if (locale->icuLocale == nullptr)
             continue;
-        icu::Locale* icuLocalePtr = static_cast<icu::Locale*>(locale->icuLocale);
-        if (*icuLocalePtr == *static_cast<icu::Locale*>(tempLocale.icuLocale)) {
+        if (const auto* icuLocalePtr = static_cast<icu::Locale*>(locale->icuLocale);
+            *icuLocalePtr == *static_cast<icu::Locale*>(tempLocale.icuLocale)) {
             return locale;
         }
     }
     // linear-search couldn't find it, create a new one
-    Locale* newLocale = new Locale(language, country, variant);
+    const auto* newLocale = new Locale(language, country, variant);
     if (newLocale->IsValid() == false) {
         delete newLocale;
         return nullptr;
@@ -66,10 +93,10 @@ const Locale* Locale::Find(const char16_t* language, const char16_t* country, co
 const Locale& Locale::Default() {
     static Locale* defaultLocale = nullptr;
     if (defaultLocale == nullptr) [[unlikely]] {
-        icu::Locale icuDefaultLocale = icu::Locale::getDefault();
-        auto* country = Utils::CStrings::CreateConvertedString<char16_t>(icuDefaultLocale.getCountry());
-        auto* language = Utils::CStrings::CreateConvertedString<char16_t>(icuDefaultLocale.getLanguage());
-        auto* variant = Utils::CStrings::CreateConvertedString<char16_t>(icuDefaultLocale.getVariant());
+        const icu::Locale& icuDefaultLocale = icu::Locale::getDefault();
+        const auto* country = Utils::CStrings::CreateConvertedString<char16_t>(icuDefaultLocale.getCountry());
+        const auto* language = Utils::CStrings::CreateConvertedString<char16_t>(icuDefaultLocale.getLanguage());
+        const auto* variant = Utils::CStrings::CreateConvertedString<char16_t>(icuDefaultLocale.getVariant());
 
         const Locale* foundLocale = Find(language, country, variant);
         defaultLocale = const_cast<Locale*>(foundLocale);
@@ -85,10 +112,10 @@ const Locale& Locale::Default() {
 const Locale& Locale::Invariant() {
     static Locale* invariantLocale = nullptr;
     if (invariantLocale == nullptr) [[unlikely]] {
-        icu::Locale icuInvariantLocale = icu::Locale::getRoot();
-        auto* country = Utils::CStrings::CreateConvertedString<char16_t>(icuInvariantLocale.getCountry());
-        auto* language = Utils::CStrings::CreateConvertedString<char16_t>(icuInvariantLocale.getLanguage());
-        auto* variant = Utils::CStrings::CreateConvertedString<char16_t>(icuInvariantLocale.getVariant());
+        const icu::Locale& icuInvariantLocale = icu::Locale::getRoot();
+        const auto* country = Utils::CStrings::CreateConvertedString<char16_t>(icuInvariantLocale.getCountry());
+        const auto* language = Utils::CStrings::CreateConvertedString<char16_t>(icuInvariantLocale.getLanguage());
+        const auto* variant = Utils::CStrings::CreateConvertedString<char16_t>(icuInvariantLocale.getVariant());
         const Locale* foundLocale = Find(language, country, variant);
         invariantLocale = const_cast<Locale*>(foundLocale);
         // This should always be found

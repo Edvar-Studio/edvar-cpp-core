@@ -17,5 +17,6 @@
 #include "Transform.inl"  // IWYU pragma: keep
 #include "Vector.inl"     // IWYU pragma: keep
 
-#include "Math/Color.hpp" // IWYU pragma: keep
-#include "Random.hpp"     // IWYU pragma: keep
+#include "Color.hpp"     // IWYU pragma: keep
+#include "Random.hpp"    // IWYU pragma: keep
+#include "Shapes.hpp"    // IWYU pragma: keep

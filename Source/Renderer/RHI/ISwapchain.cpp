@@ -1,8 +1,8 @@
-﻿#include "Rendering/ISwapchain.hpp"
+﻿#include "Renderer/RHI/ISwapchain.hpp"
 
 #include "Windowing/Window.hpp"
 
-namespace Edvar::Rendering {
+namespace Edvar::Renderer::RHI {
 ISwapchain::ISwapchain(const RenderDeviceRef& RenderDevice, const Windowing::Window& forWindow,
                        const ResourceDataFormat dataFormat)
     : IRenderDeviceDependent(RenderDevice), AssociatedWindow(forWindow.AsShared()), Format(dataFormat) {}

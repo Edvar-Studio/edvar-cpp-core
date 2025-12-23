@@ -1,19 +1,35 @@
 ﻿#pragma once
 
 #include "Memory/Atomic.hpp"
-#include <type_traits>
+
 namespace Edvar::Memory {
 template <typename T, bool ThreadSafe = false> class SharedPointer;
 template <typename T, bool ThreadSafe = false> class SharedReference;
 template <typename T, bool ThreadSafe = false> class WeakPointer;
-template <typename T> struct EnableSharedFromThis;
+template <typename T, bool ThreadSafe = false> struct EnableSharedFromThis;
 namespace _z__Private {
-struct EnableSharedFromThisBase {};
+struct EnableSharedFromThisBase {
+    virtual ~EnableSharedFromThisBase() = default;
+};
+// Trait to detect whether a type is complete. Using SFINAE on sizeof(T).
+template <typename T, typename = void> struct is_complete : std::false_type {};
+template <typename T> struct is_complete<T, std::void_t<decltype(sizeof(T))>> : std::true_type {};
+template <typename T> inline constexpr bool is_complete_v = is_complete<T>::value;
+// SFINAE-safe helper: first check completeness, then check base-of relationship.
+template <typename T> constexpr bool is_derived_from_EnableSharedFromThisBase() {
+    if constexpr (!is_complete_v<T>) {
+        return false;
+    } else {
+        return std::is_base_of_v<EnableSharedFromThisBase, T>;
+    }
+}
 } // namespace _z__Private
 
 template <bool ThreadSafe = false> class ReferenceCounter {
 public:
+    enum class ZeroCounterTag { Tag };
     ReferenceCounter() : HardCounter(1), WeakCounter(0) {}
+    ReferenceCounter(ZeroCounterTag type) : HardCounter(0), WeakCounter(0) {}
     ReferenceCounter(int hardCount, int weakCount) : HardCounter(hardCount), WeakCounter(weakCount) {}
     ~ReferenceCounter() = default;
     ReferenceCounter(const ReferenceCounter& other) = delete;
@@ -35,16 +51,41 @@ public:
 
     void IncrementHard() { ++HardCounter; }
     void DecrementHard() { --HardCounter; }
-    int GetHardCount() const { return HardCounter; }
+    int GetHardCount() const { return LoadHard(); }
+
+    // Atomic-aware fetch/add helpers. Return the previous value.
+    int FetchAddHard(int delta) { return FetchAddImpl(HardCounter, delta); }
+    int FetchAddWeak(int delta) { return FetchAddImpl(WeakCounter, delta); }
+
+    int LoadHard() const { return LoadImpl(HardCounter); }
+    int LoadWeak() const { return LoadImpl(WeakCounter); }
 
     void IncrementWeak() { ++WeakCounter; }
     void DecrementWeak() { --WeakCounter; }
-    int GetWeakCount() const { return WeakCounter; }
+    int GetWeakCount() const { return LoadWeak(); }
 
 private:
     using CounterValueType = std::conditional_t<ThreadSafe, Memory::Atomic<int>, int>;
     CounterValueType HardCounter;
     CounterValueType WeakCounter;
+
+    template <typename CounterT> static int FetchAddImpl(CounterT& counter, int delta) {
+        if constexpr (ThreadSafe) {
+            return counter.FetchAdd(delta, Memory::MemoryOrder::AcquireAndRelease);
+        } else {
+            int prev = counter;
+            counter += delta;
+            return prev;
+        }
+    }
+
+    template <typename CounterT> static int LoadImpl(const CounterT& counter) {
+        if constexpr (ThreadSafe) {
+            return counter.Load(Memory::MemoryOrder::Acquire);
+        } else {
+            return counter;
+        }
+    }
 };
 
 template <typename ValueT, bool ThreadSafe> class ReferenceCountedPointerBase {
@@ -55,63 +96,69 @@ public:
     ValueT& operator*() const { return *Get(); }
 
     [[nodiscard]] bool IsValid() const {
-        return this->managedObject != nullptr && this->Counter != nullptr && this->Counter->GetHardCount() > 0;
+        return this->managedObject != nullptr && this->Counter != nullptr && this->Counter->LoadHard() > 0;
     }
 
     template <bool UsesHardCounter> void DecreaseCounter() {
-        if (!IsValid()) {
+        if (this->Counter == nullptr) {
             return;
         }
         if constexpr (UsesHardCounter) {
-            this->Counter->DecrementHard();
-            if (this->Counter->GetHardCount() == 0) {
+            int prev = this->Counter->FetchAddHard(-1);
+            if (prev <= 0) {
+                Platform::GetPlatform().OnFatalError(u"ReferenceCounter underflow (hard)");
+            }
+            if (prev == 1) {
+                // last hard reference; destroy managed object
                 delete this->managedObject;
-                if (this->Counter->GetWeakCount() == 0) {
+                if (this->Counter->LoadWeak() == 0) {
                     delete this->Counter;
                 }
             }
         } else {
-            this->Counter->DecrementWeak();
-            if (this->Counter->GetHardCount() == 0 && this->Counter->GetWeakCount() == 0) {
-                delete this->Counter;
+            int prev = this->Counter->FetchAddWeak(-1);
+            if (prev <= 0) {
+                Platform::GetPlatform().OnFatalError(u"ReferenceCounter underflow (weak)");
+            }
+            if (prev == 1) {
+                if (this->Counter->LoadHard() == 0) {
+                    delete this->Counter;
+                }
             }
         }
     }
 
     template <bool UsesHardCounter> void IncreaseCounter() {
-        if (!IsValid()) {
+        if (this->Counter == nullptr) {
             return;
         }
         if constexpr (UsesHardCounter) {
-            this->Counter->IncrementHard();
+            this->Counter->FetchAddHard(1);
         } else {
-            this->Counter->IncrementWeak();
+            this->Counter->FetchAddWeak(1);
         }
     }
 
     template <bool UsesHardCounter> void SetCounter(ReferenceCounter<ThreadSafe>* newCounter) {
+        // If we're assigning the same counter pointer, do nothing.
+        // Decreasing then increasing the same counter can delete the managed
+        // object (when prev == 1). Guarding avoids destroying the object
+        // during self-assignment or when assigning from a temporary that
+        // shares the same counter.
+        if (this->Counter == newCounter) {
+            return;
+        }
+
         DecreaseCounter<UsesHardCounter>();
         this->Counter = newCounter;
     }
 
     ReferenceCounter<ThreadSafe>* InternalGetCounter() const { return this->Counter; }
-    void InternalSetManagedObject(ValueT* object) {
-        if (object == this->managedObject) {
-            return;
-        }
-        managedObject = object;
-        if constexpr (sizeof(ValueT) > 0 && std::is_base_of_v<_z__Private::EnableSharedFromThisBase, ValueT>) {
-            if (this->managedObject != nullptr) {
-                auto* enableShared = static_cast<EnableSharedFromThis<ValueT>*>(this->managedObject);
-                enableShared->weakThis = WeakPointer<ValueT, ThreadSafe>();
-                enableShared->weakThis.SetCounter(this->Counter);
-                enableShared->weakThis.managedObject = this->managedObject;
-                enableShared->weakThis.template IncreaseCounter<false>();
-            }
-        }
-    }
+    void InternalReleaseCounter() { this->Counter = nullptr; }
+    void InternalSetManagedObject(ValueT* object);
 
 protected:
+    void InternalSetManagedObjectDirect(ValueT* object) { managedObject = object; }
     ReferenceCounter<ThreadSafe>* Counter;
     ReferenceCountedPointerBase(ReferenceCounter<ThreadSafe>* counter) : Counter(counter), managedObject(nullptr) {}
 
@@ -137,13 +184,29 @@ protected:
         }
         return *this;
     }
-
     ValueT* managedObject;
+    template <typename, bool> friend class SharedPointer;
+    template <typename, bool> friend class SharedReference;
+    template <typename, bool> friend class WeakPointer;
+    template <typename, bool> friend struct EnableSharedFromThis;
 };
 
 template <typename T, bool ThreadSafe> class SharedPointer final : public ReferenceCountedPointerBase<T, ThreadSafe> {
 public:
-    SharedPointer() : ReferenceCountedPointerBase<T, ThreadSafe>(new ReferenceCounter<ThreadSafe>()) {}
+    SharedPointer() : ReferenceCountedPointerBase<T, ThreadSafe>(nullptr) {}
+    // Explicit copy constructor to ensure reference count is incremented on copy.
+    SharedPointer(const SharedPointer& other) : ReferenceCountedPointerBase<T, ThreadSafe>(other.InternalGetCounter()) {
+        this->InternalSetManagedObject(other.Get());
+        this->template IncreaseCounter<true>();
+    }
+    SharedPointer& operator=(const SharedPointer& other) {
+        if (this != &other) {
+            this->template SetCounter<true>(other.InternalGetCounter());
+            this->InternalSetManagedObject(other.Get());
+            this->template IncreaseCounter<true>();
+        }
+        return *this;
+    }
     ~SharedPointer() override { this->template DecreaseCounter<true>(); }
     SharedPointer(T* object) : ReferenceCountedPointerBase<T, ThreadSafe>(new ReferenceCounter<ThreadSafe>()) {
         this->InternalSetManagedObject(object);
@@ -162,14 +225,16 @@ public:
     template <typename OtherT, bool OtherThreadSafe>
     SharedPointer(const SharedPointer<OtherT, OtherThreadSafe>& other)
         : ReferenceCountedPointerBase<T, ThreadSafe>(other.InternalGetCounter()) {
-        this->InternalSetManagedObject(other.Get());
+        static_assert(OtherThreadSafe == ThreadSafe, "Cannot convert between different thread-safety specializations");
+        this->InternalSetManagedObject(static_cast<T*>(other.Get()));
         this->template IncreaseCounter<true>();
     }
 
     template <typename OtherT, bool OtherThreadSafe>
     SharedPointer(const SharedReference<OtherT, OtherThreadSafe>& other)
         : ReferenceCountedPointerBase<T, ThreadSafe>(other.InternalGetCounter()) {
-        this->InternalSetManagedObject(other.Get());
+        static_assert(OtherThreadSafe == ThreadSafe, "Cannot convert between different thread-safety specializations");
+        this->InternalSetManagedObject(static_cast<T*>(other.Get()));
         this->template IncreaseCounter<true>();
     }
 
@@ -177,19 +242,21 @@ public:
     SharedPointer& operator=(const SharedPointer<OtherT, OtherThreadSafe>& other)
         requires(std::is_convertible_v<OtherT*, T*> || std::is_base_of_v<T, OtherT>)
     {
-        if (this != &other) {
-            this->template SetCounter<true>(other.GetCounter());
-            this->InternalSetManagedObject(other.Get());
+        static_assert(OtherThreadSafe == ThreadSafe, "Cannot convert between different thread-safety specializations");
+        if (this->InternalGetCounter() != other.InternalGetCounter()) {
+            this->template SetCounter<true>(other.InternalGetCounter());
+            this->InternalSetManagedObject(static_cast<T*>(other.Get()));
             this->template IncreaseCounter<true>();
         }
         return *this;
     }
     template <typename OtherT, bool OtherThreadSafe>
     SharedPointer& operator=(SharedPointer<OtherT, OtherThreadSafe>&& other) noexcept {
+        static_assert(OtherThreadSafe == ThreadSafe, "Cannot convert between different thread-safety specializations");
         if (this->Get() != other.Get()) {
             this->template SetCounter<true>(other.InternalGetCounter());
-            this->InternalSetManagedObject(other.Get());
-            other.template SetCounter<true>(nullptr);
+            this->InternalSetManagedObject(static_cast<T*>(other.Get()));
+            other.InternalReleaseCounter();
             other.InternalSetManagedObject(nullptr);
         }
         return *this;
@@ -197,9 +264,16 @@ public:
     template <typename OtherT, bool OtherThreadSafe>
     SharedPointer(SharedPointer<OtherT, OtherThreadSafe>&& other) noexcept
         : ReferenceCountedPointerBase<T, ThreadSafe>(other.InternalGetCounter()) {
-        this->InternalSetManagedObject(other.Get());
-        other.template SetCounter<true>(nullptr);
+        this->InternalSetManagedObject(static_cast<T*>(other.Get()));
+        other.InternalReleaseCounter();
         other.InternalSetManagedObject(nullptr);
+    }
+    template <typename OtherT, bool OtherThreadSafe>
+    SharedPointer& operator=(const SharedReference<OtherT, OtherThreadSafe>& other) {
+        this->template SetCounter<true>(other.InternalGetCounter());
+        this->InternalSetManagedObject(other.Get());
+        this->template IncreaseCounter<true>();
+        return *this;
     }
 
     SharedReference<T, ThreadSafe> ToSharedReference() const { return SharedReference<T, ThreadSafe>(*this); }
@@ -228,11 +302,10 @@ public:
 
     SharedReference(T* object) : ReferenceCountedPointerBase<T, ThreadSafe>(new ReferenceCounter<ThreadSafe>()) {
         if (object == nullptr) {
-            Platform::Get().OnFatalError(u"SharedReference cannot be initialized with nullptr");
+            Platform::GetPlatform().OnFatalError(u"SharedReference cannot be initialized with nullptr");
             return;
         }
         this->InternalSetManagedObject(object);
-        this->template IncreaseCounter<true>();
     }
 
     SharedReference(const SharedReference& other) : ReferenceCountedPointerBase<T, ThreadSafe>(other.Counter) {
@@ -242,20 +315,22 @@ public:
 
     SharedReference(SharedReference&& other) noexcept : ReferenceCountedPointerBase<T, ThreadSafe>(other.Counter) {
         this->InternalSetManagedObject(other.managedObject);
-        other.template SetCounter<true>(nullptr);
+        other.InternalReleaseCounter();
         other.InternalSetManagedObject(nullptr);
     }
 
     template <typename OtherT, bool OtherThreadSafe>
     SharedReference(const SharedPointer<OtherT, OtherThreadSafe>& sharedPtr)
         : ReferenceCountedPointerBase<T, ThreadSafe>(sharedPtr.InternalGetCounter()) {
-        this->InternalSetManagedObject(sharedPtr.Get());
+        static_assert(OtherThreadSafe == ThreadSafe, "Cannot convert between different thread-safety specializations");
+        this->InternalSetManagedObject(static_cast<T*>(sharedPtr.Get()));
         this->template IncreaseCounter<true>();
     }
     template <typename OtherT, bool OtherThreadSafe>
     SharedReference(const SharedReference<OtherT, OtherThreadSafe>& sharedRef)
         : ReferenceCountedPointerBase<T, ThreadSafe>(sharedRef.InternalGetCounter()) {
-        this->InternalSetManagedObject(sharedRef.Get());
+        static_assert(OtherThreadSafe == ThreadSafe, "Cannot convert between different thread-safety specializations");
+        this->InternalSetManagedObject(static_cast<T*>(sharedRef.Get()));
         this->template IncreaseCounter<true>();
     }
     ~SharedReference() override { this->template DecreaseCounter<true>(); }
@@ -264,8 +339,8 @@ public:
     SharedReference& operator=(const SharedReference& other) {
         if (this != &other) {
             this->template SetCounter<true>(other.Counter);
-            this->template IncreaseCounter<true>();
             this->InternalSetManagedObject(other.Get());
+            this->template IncreaseCounter<true>();
             return *this;
         }
         return *this;
@@ -273,6 +348,7 @@ public:
 
     template <typename OtherT, bool OtherThreadSafe>
     SharedReference& operator=(const SharedPointer<OtherT, OtherThreadSafe>& sharedPtr) {
+        static_assert(OtherThreadSafe == ThreadSafe, "Cannot convert between different thread-safety specializations");
         this->template SetCounter<true>(sharedPtr.Counter);
         this->template IncreaseCounter<true>();
         this->InternalSetManagedObject(sharedPtr.Get());
@@ -280,6 +356,7 @@ public:
     }
     template <typename OtherT, bool OtherThreadSafe>
     SharedReference& operator=(const SharedReference<OtherT, OtherThreadSafe>& sharedRef) {
+        static_assert(OtherThreadSafe == ThreadSafe, "Cannot convert between different thread-safety specializations");
         this->template SetCounter<true>(sharedRef.Counter);
         this->template IncreaseCounter<true>();
         this->InternalSetManagedObject(sharedRef.Get());
@@ -288,7 +365,7 @@ public:
 
     SharedReference& operator=(T* object) {
         if (object == nullptr) {
-            Platform::Get().OnFatalError(u"SharedReference cannot be assigned with nullptr");
+            Platform::GetPlatform().OnFatalError(u"SharedReference cannot be assigned with nullptr");
             return *this;
         }
         this->template SetCounter<true>(new ReferenceCounter<ThreadSafe>());
@@ -305,36 +382,59 @@ public:
 
 private:
     SharedReference() : ReferenceCountedPointerBase<T, ThreadSafe>(new ReferenceCounter<ThreadSafe>()) {
-        Platform::Get().OnFatalError(u"A null shared reference is detected. This should not be possible.");
+        Platform::GetPlatform().OnFatalError(u"A null shared reference is detected. This should not be possible.");
     }
-    template <typename> friend struct EnableSharedFromThis;
+    template <typename, bool> friend struct EnableSharedFromThis;
 };
 
 template <typename T, bool ThreadSafe> class WeakPointer final : public ReferenceCountedPointerBase<T, ThreadSafe> {
 public:
-    WeakPointer() : ReferenceCountedPointerBase<T, ThreadSafe>(new ReferenceCounter<ThreadSafe>()) {}
+    WeakPointer() : ReferenceCountedPointerBase<T, ThreadSafe>(nullptr) {}
+    // Explicit copy constructor and copy-assignment to ensure weak counters are handled.
+    WeakPointer(const WeakPointer& other) : ReferenceCountedPointerBase<T, ThreadSafe>(other.InternalGetCounter()) {
+        this->template IncreaseCounter<false>();
+        this->managedObject = other.Get();
+    }
+    WeakPointer(nullptr_t) : ReferenceCountedPointerBase<T, ThreadSafe>(nullptr) {}
+    WeakPointer& operator=(const WeakPointer& other) {
+        if (this != &other) {
+            this->template SetCounter<false>(other.InternalGetCounter());
+            this->managedObject = other.Get();
+            this->template IncreaseCounter<false>();
+        }
+        return *this;
+    }
+    WeakPointer& operator=(const nullptr_t) {
+        Reset();
+        return *this;
+    }
     ~WeakPointer() override { this->template DecreaseCounter<false>(); }
 
     template <typename OtherT, bool OtherThreadSafe>
     WeakPointer(const SharedPointer<OtherT, OtherThreadSafe>& sharedPtr)
         : ReferenceCountedPointerBase<T, ThreadSafe>(sharedPtr.InternalGetCounter()) {
+        static_assert(OtherThreadSafe == ThreadSafe, "Cannot convert between different thread-safety specializations");
         this->template IncreaseCounter<false>();
-        this->managedObject = sharedPtr.Get();
+        this->managedObject = static_cast<T*>(sharedPtr.Get());
     }
     template <typename OtherT, bool OtherThreadSafe>
     WeakPointer(const SharedReference<OtherT, OtherThreadSafe>& sharedRef)
         : ReferenceCountedPointerBase<T, ThreadSafe>(sharedRef.InternalGetCounter()) {
+        static_assert(OtherThreadSafe == ThreadSafe, "Cannot convert between different thread-safety specializations");
         this->template IncreaseCounter<false>();
-        this->managedObject = sharedRef.Get();
+        this->managedObject = static_cast<T*>(sharedRef.Get());
     }
     template <typename OtherT, bool OtherThreadSafe>
     WeakPointer(const WeakPointer<OtherT, OtherThreadSafe>& weakPtr)
         : ReferenceCountedPointerBase<T, ThreadSafe>(weakPtr.InternalGetCounter()) {
+        static_assert(OtherThreadSafe == ThreadSafe, "Cannot convert between different thread-safety specializations");
         this->template IncreaseCounter<false>();
+        this->managedObject = static_cast<T*>(weakPtr.Get());
     }
 
     template <typename OtherT, bool OtherThreadSafe>
     WeakPointer& operator=(const SharedPointer<OtherT, OtherThreadSafe>& sharedPtr) {
+        static_assert(OtherThreadSafe == ThreadSafe, "Cannot convert between different thread-safety specializations");
         this->template SetCounter<false>(sharedPtr.InternalGetCounter());
         this->template IncreaseCounter<false>();
         this->managedObject = sharedPtr.Get();
@@ -342,26 +442,43 @@ public:
     }
     template <typename OtherT, bool OtherThreadSafe>
     WeakPointer& operator=(const SharedReference<OtherT, OtherThreadSafe>& sharedRef) {
+        static_assert(OtherThreadSafe == ThreadSafe, "Cannot convert between different thread-safety specializations");
         this->template SetCounter<false>(sharedRef.InternalGetCounter());
-        this->template IncreaseCounter<false>();
         this->managedObject = sharedRef.Get();
+        this->template IncreaseCounter<false>();
         return *this;
     }
     template <typename OtherT, bool OtherThreadSafe>
     WeakPointer& operator=(const WeakPointer<OtherT, OtherThreadSafe>& weakPtr) {
-        this->template SetCounter<false>(weakPtr.InternalGetCounter());
-        this->template IncreaseCounter<false>();
+        static_assert(OtherThreadSafe == ThreadSafe, "Cannot convert between different thread-safety specializations");
+        if (this->InternalGetCounter() != weakPtr.InternalGetCounter()) {
+            this->template SetCounter<false>(weakPtr.InternalGetCounter());
+            this->managedObject = weakPtr.Get();
+            this->template IncreaseCounter<false>();
+        }
         return *this;
     }
 
     SharedPointer<T, ThreadSafe> Lock() const {
-        if (this->Counter->GetHardCount() > 0) {
-            SharedPointer<T, ThreadSafe> locked = SharedPointer<T, ThreadSafe>(this->managedObject);
-            locked.template SetCounter<true>(this->Counter);
-            locked.template IncreaseCounter<true>();
-            return locked;
+        if (this->Counter == nullptr) {
+            return SharedPointer<T, ThreadSafe>();
         }
-        return SharedPointer<T, ThreadSafe>();
+        int prev = this->Counter->FetchAddHard(1);
+        if (prev == 0) {
+            // object already expired; undo increment and fail
+            this->Counter->FetchAddHard(-1);
+            return SharedPointer<T, ThreadSafe>();
+        }
+        SharedPointer<T, ThreadSafe> locked;
+        locked.template SetCounter<true>(this->Counter);
+        locked.InternalSetManagedObject(this->managedObject);
+        return locked;
+    }
+
+    void Reset() {
+        this->InternalSetManagedObject(nullptr);
+        this->template DecreaseCounter<false>();
+        this->InternalReleaseCounter();
     }
 
     bool operator==(const WeakPointer& other) const { return this->managedObject == other.managedObject; }
@@ -402,30 +519,54 @@ private:
     T* ptr;
 };
 
-template <typename T> struct EnableSharedFromThis {
+template <typename T, bool ThreadSafe> struct EnableSharedFromThis : _z__Private::EnableSharedFromThisBase {
 public:
     virtual ~EnableSharedFromThis() = default;
-    template <typename U> SharedPointer<U> SharedFromThis(const U* derived) const {
-        if (weakThis.Get() == nullptr) {
-            Platform::Get().OnFatalError(u"EnableSharedFromThis: Object is not managed by SharedPointer.");
-            return SharedPointer<U>();
+    template <typename U> SharedPointer<U, ThreadSafe> SharedFromThis(const U* /*derived*/) const {
+        if (weakThis.InternalGetCounter() == nullptr) {
+            Platform::GetPlatform().OnFatalError(u"EnableSharedFromThis: Object is not managed by SharedPointer.");
+            return SharedPointer<U, ThreadSafe>();
         }
-        return weakThis.Lock().ToSharedPointer();
+        return weakThis.Lock();
     }
 
-    SharedReference<T> AsShared() const {
-        if (weakThis.Get() == nullptr) {
-            Platform::Get().OnFatalError(u"EnableSharedFromThis: Object is not managed by SharedPointer.");
-            return SharedReference<T>();
+    SharedReference<T, ThreadSafe> AsShared() const {
+        if (weakThis.InternalGetCounter() == nullptr) {
+            Platform::GetPlatform().OnFatalError(u"EnableSharedFromThis: Object is not managed by SharedPointer.");
+            return SharedReference<T, ThreadSafe>();
         }
         return weakThis.Lock().ToSharedReference();
     }
 
 private:
     template <typename, bool> friend class ReferenceCountedPointerBase;
-    WeakPointer<T> weakThis;
+    WeakPointer<T, ThreadSafe> weakThis;
 };
 
+template <typename ValueT, bool ThreadSafe>
+void ReferenceCountedPointerBase<ValueT, ThreadSafe>::InternalSetManagedObject(ValueT* object) {
+    if (object == this->managedObject) {
+        return;
+    }
+    managedObject = object;
+    if constexpr (_z__Private::is_derived_from_EnableSharedFromThisBase<ValueT>()) {
+        if (this->managedObject != nullptr) {
+            auto* base = reinterpret_cast<EnableSharedFromThis<ValueT, ThreadSafe>*>(this->managedObject);
+#if _DEBUG
+            if (Counter->LoadHard() == 0) {
+                Platform::GetPlatform().OnFatalError(
+                    u"EnableSharedFromThis: Managed object has zero hard reference count. "
+                    u"This should not be possible.");
+            }
+#endif
+            if (!base->weakThis.IsValid()) {
+                base->weakThis.template SetCounter<false>(static_cast<ReferenceCounter<ThreadSafe>*>(Counter));
+                base->weakThis.InternalSetManagedObjectDirect(static_cast<ValueT*>(managedObject));
+                base->weakThis.template IncreaseCounter<false>();
+            }
+        }
+    }
+}
 } // namespace Edvar::Memory
 
 namespace Edvar {
@@ -450,28 +591,30 @@ template <typename T, typename... ArgsT> SharedReference<T> MakeShared(ArgsT&&..
 
 template <typename ToT, typename FromT>
 SharedPointer<ToT> StaticCastSharedPointer(const SharedPointer<FromT>& fromPtr) {
-    ToT* castedPtr = static_cast<ToT*>(fromPtr.Get());
-    SharedPointer<ToT> toPtr(castedPtr);
-    toPtr.template SetCounter<true>(fromPtr.InternalGetCounter());
-    toPtr.template IncreaseCounter<true>();
-    return toPtr;
+    SharedPointer<ToT> castedPtr;
+    if (fromPtr.IsValid()) {
+        castedPtr.template SetCounter<true>(fromPtr.InternalGetCounter());
+        ToT* castedObj = static_cast<ToT*>(fromPtr.Get());
+        castedPtr.template IncreaseCounter<true>();
+        castedPtr.InternalSetManagedObject(castedObj);
+    }
+    return castedPtr;
 }
 
 template <typename ToT, typename FromT>
 SharedReference<ToT> StaticCastSharedReference(const SharedReference<FromT>& fromRef) {
-    ToT* castedPtr = static_cast<ToT*>(fromRef.Get());
-    SharedReference<ToT> toRef(castedPtr);
-    toRef.template SetCounter<true>(fromRef.InternalGetCounter());
-    toRef.template IncreaseCounter<true>();
-    return toRef;
+    SharedReference<ToT> castedPtr = StaticCastSharedPointer<ToT>(SharedPointer<FromT>(fromRef)).ToSharedReference();
+    return castedPtr;
 }
 
 template <typename ToT, typename FromT> WeakPointer<ToT> StaticCastWeakPointer(const WeakPointer<FromT>& fromPtr) {
-    ToT* castedPtr = static_cast<ToT*>(fromPtr.Get());
-    WeakPointer<ToT> toPtr;
-    toPtr.managedObject = castedPtr;
-    toPtr.template SetCounter<false>(fromPtr.InternalGetCounter());
-    toPtr.template IncreaseCounter<false>();
-    return toPtr;
+    WeakPointer<ToT> castedPtr;
+    if (fromPtr.IsValid()) {
+        castedPtr.template SetCounter<false>(fromPtr.InternalGetCounter());
+        ToT* castedObj = static_cast<ToT*>(fromPtr.Get());
+        castedPtr.template IncreaseCounter<false>();
+        castedPtr.InternalSetManagedObject(castedObj);
+    }
+    return castedPtr;
 }
 } // namespace Edvar

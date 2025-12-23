@@ -1,9 +1,12 @@
-﻿#include "Rendering/D3D12/D3D12Swapchain.hpp"
+﻿#include "Renderer/RHI/D3D12/D3D12Swapchain.hpp"
+
+#include "Renderer/RHI/D3D12/D3D12CommandQueue.hpp"
+#include "Renderer/RHI/D3D12/D3D12RenderTarget.hpp"
 #ifdef _WIN32
 
-#    include "Rendering/RenderingCore.hpp"
-#    include "Rendering/D3D12/D3D12RenderDevice.hpp"
-#    include "Rendering/D3D12/D3D12RenderingAPI.hpp"
+#    include "Renderer/RHI/RenderingCore.hpp"
+#    include "Renderer/RHI/D3D12/D3D12RenderDevice.hpp"
+#    include "Renderer/RHI/D3D12/D3D12RenderingAPI.hpp"
 #    include "Windowing/Window.hpp"
 
 #    include <dxgi1_5.h>
@@ -12,8 +15,45 @@
 
 #endif
 
-namespace Edvar::Rendering::D3D12 {
+namespace Edvar::Renderer::RHI::D3D12 {
 
+D3D12SwapchainBufferTexture::~D3D12SwapchainBufferTexture() {
+    if (nativePtr) {
+        static_cast<ID3D12Resource*>(nativePtr)->Release();
+    }
+}
+Math::Vector2i D3D12SwapchainBufferTexture::GetSize() const {
+    ID3D12Resource2* resource = static_cast<ID3D12Resource2*>(nativePtr);
+    D3D12_RESOURCE_DESC desc = resource->GetDesc();
+    return Math::Vector2i(static_cast<int32_t>(desc.Width), static_cast<int32_t>(desc.Height));
+}
+uint32_t D3D12SwapchainBufferTexture::GetMipLevels() const {
+    ID3D12Resource2* resource = static_cast<ID3D12Resource2*>(nativePtr);
+    D3D12_RESOURCE_DESC desc = resource->GetDesc();
+    return desc.MipLevels;
+}
+uint32_t D3D12SwapchainBufferTexture::GetSampleCount() const {
+    ID3D12Resource2* resource = static_cast<ID3D12Resource2*>(nativePtr);
+    D3D12_RESOURCE_DESC1 desc = resource->GetDesc1();
+    return desc.SampleDesc.Count;
+}
+ResourceDataFormat D3D12SwapchainBufferTexture::GetFormat() const {
+    ID3D12Resource2* resource = static_cast<ID3D12Resource2*>(nativePtr);
+    D3D12_RESOURCE_DESC1 desc = resource->GetDesc1();
+    return static_cast<ResourceDataFormat>(desc.Format);
+}
+WeakPointer<ITextureView> D3D12SwapchainBufferTexture::CreateView(const ResourceDataFormat& withResourceFormat,
+                                                                  uint32_t withMipLevel) {
+    SharedReference<D3D12RenderTarget2D> renderTarget =
+        MakeShared<D3D12RenderTarget2D>(SharedFromThis(this), withResourceFormat, withMipLevel, 0);
+    ownedViews.Add(renderTarget);
+    return renderTarget;
+}
+WeakPointer<IDepthStencil2DView>
+D3D12SwapchainBufferTexture::CreateDepthStencilView(const ResourceDataFormat& withResourceFormat,
+                                                    uint32_t withMipLevel) {
+    return nullptr; // not supported.
+}
 D3D12Swapchain::D3D12Swapchain(const SharedReference<IRenderDevice>& renderDevice, const Windowing::Window& forWindow,
                                ResourceDataFormat dataFormat)
     : ISwapchain(renderDevice, forWindow, dataFormat), nativePtr(nullptr) {
@@ -31,6 +71,7 @@ void D3D12Swapchain::Present(uint8_t interval) {
     if (const auto swapChain = static_cast<IDXGISwapChain*>(nativePtr); FAILED(swapChain->Present(interval, 0))) {
         CheckDeviceSanity();
     }
+    currentBackBufferIndex = (currentBackBufferIndex + 1) % GetBufferCount();
 }
 void D3D12Swapchain::SetFullscreen(const bool fullscreen, const Math::Vector2i& newSize) {
     const auto swapChain = static_cast<IDXGISwapChain*>(nativePtr);
@@ -79,6 +120,7 @@ void D3D12Swapchain::Resize(const Math::Vector2i& newSize, uint8_t bufferCount, 
             return;
         }
     }
+    // TODO: Recreate the render target views. Flush the work on the command contexts.
 }
 void D3D12Swapchain::SetBackgroundColor(const Math::Color& color) {
     if (nativePtr != nullptr) {
@@ -92,9 +134,9 @@ void D3D12Swapchain::SetBackgroundColor(const Math::Color& color) {
 }
 void D3D12Swapchain::SetHDRMode(const bool useHdr) {
     ISwapchain::SetHDRMode(useHdr);
-    if (nativePtr != nullptr) {
+    if (nativePtr != nullptr && GetAssociatedWindow().DoesCurrentOutputSupportHDR()) {
         const auto swapChain = static_cast<IDXGISwapChain4*>(nativePtr);
-        DXGI_COLOR_SPACE_TYPE colorSpace =
+        const DXGI_COLOR_SPACE_TYPE colorSpace =
             useHdr ? DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709 : DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709;
         if (FAILED(swapChain->SetColorSpace1(colorSpace))) {
             CheckDeviceSanity();
@@ -117,13 +159,17 @@ void D3D12Swapchain::OnRenderDeviceRestored(IRenderDevice& newDevice) {
     // Recreate the swap chain
     CreateNativeSwapchain(GetAssociatedWindow(), GetFormat());
 }
+
+static constexpr int32_t EDVAR_CPP_CORE_D3D12_WINDOW_BUFFER_COUNT = 3;
+
 void D3D12Swapchain::CreateNativeSwapchain(const Windowing::Window& forWindow, ResourceDataFormat newDataFormat) {
-    Platform::Get().PrintMessageToDebugger(u"D3D12: Creating Swapchain for window.\n");
+    Platform::GetPlatform().PrintMessageToDebugger(u"D3D12: Creating Swapchain for window.\n");
     const SharedPointer<D3D12RenderDevice> device = StaticCastSharedReference<D3D12RenderDevice>(GetAssociatedDevice());
-    Platform::Get().PrintMessageToDebugger(*String::PrintF(u"D3D12: Using device handle %p.\n", device->nativeHandle));
+    Platform::GetPlatform().PrintMessageToDebugger(
+        *String::Format(u"D3D12: Using device handle {}.\n", device->NativeHandle));
     IDXGISwapChain1* swapChain = nullptr;
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.BufferCount = 3;
+    swapChainDesc.BufferCount = EDVAR_CPP_CORE_D3D12_WINDOW_BUFFER_COUNT;
     swapChainDesc.Format = static_cast<DXGI_FORMAT>(newDataFormat);
     swapChainDesc.Stereo = false;
     swapChainDesc.SampleDesc = {1, 0};
@@ -132,13 +178,39 @@ void D3D12Swapchain::CreateNativeSwapchain(const Windowing::Window& forWindow, R
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
     swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
     swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-    if (FAILED(GDXGIFactory->CreateSwapChainForHwnd(static_cast<IUnknown*>(device->nativeHandle),
-                                                    static_cast<HWND>(forWindow.GetImplementation().GetNativeHandle()),
-                                                    &swapChainDesc, nullptr, nullptr, &swapChain))) {
-        Platform::Get().PrintMessageToDebugger(u"D3D12: Failed to create swapchain for window.\n");
+    auto* commandQ =
+        static_cast<IUnknown*>(StaticCastSharedPointer<D3D12CommandQueue>(device->GetGraphicsQueue())->nativeHandle);
+    auto windowHandle = static_cast<HWND>(forWindow.GetImplementation().GetNativeHandle());
+    if (FAILED(GDXGIFactory->CreateSwapChainForHwnd(commandQ, windowHandle, &swapChainDesc, nullptr, nullptr,
+                                                    &swapChain))) {
+        Platform::GetPlatform().PrintMessageToDebugger(u"D3D12: Failed to create swapchain for window.\n");
         CheckDeviceSanity();
         return;
     }
     nativePtr = swapChain;
+    // set up the back-buffer array.
+    buffers.Clear();
+    for (uint32_t i = 0; i < GetBufferCount(); ++i) {
+        ID3D12Resource* backBufferResource = nullptr;
+        if (FAILED(swapChain->GetBuffer(i, IID_PPV_ARGS(&backBufferResource)))) {
+            Platform::GetPlatform().PrintMessageToDebugger(
+                *String::Format(u"D3D12: Failed to get back buffer {} from swapchain.\n", i));
+            CheckDeviceSanity();
+            continue;
+        }
+        SharedReference<D3D12SwapchainBufferTexture> bufferTexture =
+            MakeShared<D3D12SwapchainBufferTexture>(GetAssociatedDevice(), backBufferResource);
+        buffers.Add(bufferTexture);
+        WeakPointer<ITextureView> renderTarget = bufferTexture->CreateView(ResourceDataFormat::Unknown, 0);
+        renderTargets.Add(renderTarget);
+    }
 }
-} // namespace Edvar::Rendering::D3D12
+SharedReference<ISwapchainBufferTexture> D3D12Swapchain::GetBufferTexture(const uint32_t index) {
+    return buffers.Get(index);
+}
+WeakPointer<IRenderTarget2D> D3D12Swapchain::GetBufferRenderTarget(const uint32_t index) {
+    return renderTargets.Get(index);
+}
+uint32_t D3D12Swapchain::GetBufferCount() const { return EDVAR_CPP_CORE_D3D12_WINDOW_BUFFER_COUNT; }
+uint32_t D3D12Swapchain::GetCurrentBackBufferIndex() const { return currentBackBufferIndex; }
+} // namespace Edvar::Renderer::RHI::D3D12

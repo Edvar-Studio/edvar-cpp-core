@@ -616,13 +616,13 @@ inline Vector3d Transform::GetScaleSign() const {
 // ============================================================================
 
 inline Containers::String Transform::ToString() const {
-    return Containers::String::PrintF(
-        u"Transform(T: (%.3f, %.3f, %.3f), R: (%.3f, %.3f, %.3f, %.3f), S: (%.3f, %.3f, %.3f))", Translation.X,
+    return Containers::String::Format(
+        u"Transform(T: ({;p=3}, {;p=3}, {;p=3}), R: ({;p=3}, {;p=3}, {;p=3}, {;p=3}), S: ({;p=3}, {;p=3}, {;p=3}))", Translation.X,
         Translation.Y, Translation.Z, Rotation.X, Rotation.Y, Rotation.Z, Rotation.W, Scale.X, Scale.Y, Scale.Z);
 }
 
 inline Containers::String Transform::ToStringCompact() const {
-    return Containers::String::PrintF(u"T[%.2f,%.2f,%.2f] R[%.2f,%.2f,%.2f,%.2f] S[%.2f,%.2f,%.2f]", Translation.X,
+    return Containers::String::Format(u"T[{;p=2},{;p=2},{;p=2}] R[{;p=2},{;p=2},{;p=2},{;p=2}] S[{;p=2},{;p=2},{;p=2}]", Translation.X,
                                       Translation.Y, Translation.Z, Rotation.X, Rotation.Y, Rotation.Z, Rotation.W,
                                       Scale.X, Scale.Y, Scale.Z);
 }

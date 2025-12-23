@@ -1,13 +1,18 @@
 #pragma once
 #include "Platform/Windows/WindowsPlatformWindowing.hpp"
 
-namespace Edvar::Rendering {
+namespace Edvar::Renderer::RHI {
 class IRenderDevice;
 typedef Memory::SharedReference<IRenderDevice> RenderDeviceRef;
+#if defined(_DEBUG) && defined(EDVAR_CPP_CORE_GRAPHICS_API_DEBUG)
+#    define EDVAR_CPP_CORE_GRAPHICS_API_DEBUG_RENDERING 1
+#else
+#    define EDVAR_CPP_CORE_GRAPHICS_API_DEBUG_RENDERING 0
+#endif
 
 class EDVAR_CPP_CORE_API IRenderDeviceDependent : public Memory::EnableSharedFromThis<IRenderDeviceDependent> {
 public:
-    ~IRenderDeviceDependent() override;
+    virtual ~IRenderDeviceDependent() override;
     IRenderDeviceDependent(const IRenderDeviceDependent&) = delete;
     explicit IRenderDeviceDependent(const SharedReference<IRenderDevice>& device);
 
@@ -31,6 +36,7 @@ public:
             Name, name,
             Math::Min(Utils::CStrings::Length(name) + 1, static_cast<int32_t>(sizeof(Name) / sizeof(char16_t))));
     }
+    IRenderingAPI& operator=(const IRenderingAPI&) const = delete;
     ~IRenderingAPI() override;
     [[nodiscard]] const char16_t* GetName() const { return Name; }
     [[nodiscard]] bool IsActiveAPI() const;

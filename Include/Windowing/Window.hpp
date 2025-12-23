@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Platform/IPlatformWindowing.hpp"
-namespace Edvar::Rendering {
+namespace Edvar::Renderer::RHI {
 class ISwapchain;
 }
 namespace Edvar::Windowing {
@@ -69,7 +69,11 @@ class EDVAR_CPP_CORE_API Window : public Memory::EnableSharedFromThis<Window> {
     Window();
 
 public:
-    static SharedReference<Window> Create(const WindowDescriptor& descriptor) { return {new Window(descriptor)}; }
+    static SharedReference<Window> Create(const WindowDescriptor& descriptor) {
+        SharedReference<Window> newWindow = {new Window(descriptor)};
+        newWindow->InitializeRendering();
+        return newWindow;
+    }
 
     /**
      * @brief Destructor - automatically destroys the platform window
@@ -200,14 +204,14 @@ public:
     [[nodiscard]] Platform::IWindowImplementation& GetImplementation() const { return *implementation; }
     void TryClose(int32_t priorityLevel = 0);
 
-    SharedPointer<Rendering::ISwapchain> GetSwapchain() const { return swapchain; }
+    SharedPointer<Renderer::RHI::ISwapchain> GetSwapchain() const;
 
 private:
     Platform::IWindowImplementation* implementation = nullptr;
     bool useHDRWhenPossible = true;
     bool isHDREnabled = false;
     float currentDPI = 96.0f;
-    SharedPointer<Rendering::ISwapchain> swapchain;
+    SharedPointer<Renderer::RHI::ISwapchain> swapchain;
 
     void InitializeRendering();
 };

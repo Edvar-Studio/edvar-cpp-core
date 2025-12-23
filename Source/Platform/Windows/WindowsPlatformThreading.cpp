@@ -41,7 +41,7 @@ DWORD __stdcall StartManagedThread(LPVOID lpParameter) {
     } __except (AccessViolationFilter(GetExceptionInformation())) {
         const DWORD exceptionCode = GetExceptionCode();
         String reasonMessage =
-            String::PrintF(u"Thread crashed with exception code: 0x%X", static_cast<uint32_t>(exceptionCode));
+            String::Format(u"Thread crashed with exception code: 0x{:HEX}", static_cast<uint32_t>(exceptionCode));
         CrashReason reason = CrashReason::Unknown;
         switch (exceptionCode) {
         case EXCEPTION_ACCESS_VIOLATION: {
@@ -64,20 +64,20 @@ DWORD __stdcall StartManagedThread(LPVOID lpParameter) {
                     DWORD64 moduleBase = SymGetModuleBase64(GetCurrentProcess(), (DWORD64)violationAddress);
                     if (moduleBase != 0) {
                         reasonMessage =
-                            String::PrintF(u"Thread crashed due to access violation (%s) at address 0x%llX. Exception "
-                                           u"code: 0x%X (Debugger symbols present)",
+                            String::Format(u"Thread crashed due to access violation ({}) at address 0x{:HEX}. Exception "
+                                           u"code: 0x{:HEX} (Debugger symbols present)",
                                            accessTypeStr, violationAddress, static_cast<uint32_t>(exceptionCode));
                     } else {
-                        reasonMessage = String::PrintF(
-                            u"Thread crashed due to access violation (%s) at address 0x%llX. Exception code: 0x%X",
+                        reasonMessage = String::Format(
+                            u"Thread crashed due to access violation ({}) at address 0x{:HEX}. Exception code: 0x{:HEX}",
                             accessTypeStr, violationAddress, static_cast<uint32_t>(exceptionCode));
                     }
                 } else {
-                    reasonMessage = String::PrintF(u"Thread crashed due to access violation. Exception code: 0x%X",
+                    reasonMessage = String::Format(u"Thread crashed due to access violation. Exception code: 0x{:HEX}",
                                                    static_cast<uint32_t>(exceptionCode));
                 }
             } else {
-                reasonMessage = String::PrintF(u"Thread crashed due to access violation. Exception code: 0x%X",
+                reasonMessage = String::Format(u"Thread crashed due to access violation. Exception code: 0x{:HEX}",
                                                static_cast<uint32_t>(exceptionCode));
             }
             break;
@@ -96,11 +96,11 @@ DWORD __stdcall StartManagedThread(LPVOID lpParameter) {
 #    else
                 DWORD64 stackPointer = 0;
 #    endif
-                reasonMessage = String::PrintF(
-                    u"Thread crashed due to stack overflow at stack pointer 0x%llX. Exception code: 0x%X", stackPointer,
+                reasonMessage = String::Format(
+                    u"Thread crashed due to stack overflow at stack pointer 0x%{:HEX}. Exception code: 0x%{:HEX}", stackPointer,
                     static_cast<uint32_t>(exceptionCode));
             } else {
-                reasonMessage = String::PrintF(u"Thread crashed due to stack overflow. Exception code: 0x%X",
+                reasonMessage = String::Format(u"Thread crashed due to stack overflow. Exception code: 0x{:HEX}",
                                                static_cast<uint32_t>(exceptionCode));
             }
             break;
@@ -137,7 +137,7 @@ DWORD __stdcall StartManagedThread(LPVOID lpParameter) {
                 floatExceptionStr = "underflow";
                 break;
             }
-            reasonMessage = String::PrintF(u"Thread crashed due to floating-point exception (%s). Exception code: 0x%X",
+            reasonMessage = String::Format(u"Thread crashed due to floating-point exception ({}). Exception code: 0x{:HEX}",
                                            floatExceptionStr, static_cast<uint32_t>(exceptionCode));
             break;
         }
@@ -146,7 +146,7 @@ DWORD __stdcall StartManagedThread(LPVOID lpParameter) {
             reason = CrashReason::Unknown;
             const char* intExceptionStr =
                 (exceptionCode == EXCEPTION_INT_DIVIDE_BY_ZERO) ? "divide by zero" : "overflow";
-            reasonMessage = String::PrintF(u"Thread crashed due to integer exception (%s). Exception code: 0x%X",
+            reasonMessage = String::Format(u"Thread crashed due to integer exception ({}). Exception code: 0x{:HEX}",
                                            intExceptionStr, static_cast<uint32_t>(exceptionCode));
             break;
         }
@@ -155,7 +155,7 @@ DWORD __stdcall StartManagedThread(LPVOID lpParameter) {
             reason = CrashReason::Unknown;
             const char* instructionStr =
                 (exceptionCode == EXCEPTION_ILLEGAL_INSTRUCTION) ? "illegal instruction" : "privileged instruction";
-            reasonMessage = String::PrintF(u"Thread crashed due to %s. Exception code: 0x%X", instructionStr,
+            reasonMessage = String::Format(u"Thread crashed due to {}. Exception code: 0x{:HEX}", instructionStr,
                                            static_cast<uint32_t>(exceptionCode));
             break;
         }
@@ -166,22 +166,22 @@ DWORD __stdcall StartManagedThread(LPVOID lpParameter) {
                 if (pExceptionRecord->NumberParameters >= 3) {
                     ULONG_PTR faultingAddress = pExceptionRecord->ExceptionInformation[1];
                     ULONG_PTR ntstatus = pExceptionRecord->ExceptionInformation[2];
-                    reasonMessage = String::PrintF(u"Thread crashed due to in-page error at address 0x%llX (NTSTATUS: "
-                                                   u"0x%llX). Exception code: 0x%X",
+                    reasonMessage = String::Format(u"Thread crashed due to in-page error at address 0x{:HEX} (NTSTATUS: "
+                                                   u"0x{:HEX}). Exception code: 0x{:HEX}",
                                                    faultingAddress, ntstatus, static_cast<uint32_t>(exceptionCode));
                 } else {
-                    reasonMessage = String::PrintF(u"Thread crashed due to in-page error. Exception code: 0x%X",
+                    reasonMessage = String::Format(u"Thread crashed due to in-page error. Exception code: 0x{:HEX}",
                                                    static_cast<uint32_t>(exceptionCode));
                 }
             } else {
-                reasonMessage = String::PrintF(u"Thread crashed due to in-page error. Exception code: 0x%X",
+                reasonMessage = String::Format(u"Thread crashed due to in-page error. Exception code: 0x{:HEX}",
                                                static_cast<uint32_t>(exceptionCode));
             }
             break;
         }
         default:
             reason = CrashReason::Unknown;
-            reasonMessage = String::PrintF(u"Thread crashed with unhandled exception code: 0x%X",
+            reasonMessage = String::Format(u"Thread crashed with unhandled exception code: 0x{:HEX}",
                                            static_cast<uint32_t>(exceptionCode));
             break;
         }

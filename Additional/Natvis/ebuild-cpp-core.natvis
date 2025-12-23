@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+    <!-- StringBase -->
+    <Type Name="Edvar::Containers::StringBase&lt;*&gt;">
+        <DisplayString>
+            len={Data.Length}
+        </DisplayString>
+        <!-- Tell the debugger this is a string -->
+        <StringView>
+            Buffer.Allocator.Buffer, Data.Length
+        </StringView>
+
+        <Expand>
+            <Item Name="Length">Buffer.Size</Item>
+            <Item Name="Buffer">Buffer.Allocator.DataPtr</Item>
+            <ExpandedItem Name="List">Buffer</ExpandedItem>
+        </Expand>
+    </Type>
+
+    <!-- List -->
+    <Type Name="Edvar::Containers::List&lt;*&gt;">
+        <DisplayString>
+            len={Length}
+        </DisplayString>
+
+        <Expand>
+            <Item Name="Size">Size</Item>
+            <ExpandedItem Name="Allocator">Allocator</ExpandedItem>
+        </Expand>
+    </Type>
+
+    <!-- DefaultAllocator -->
+    <Type Name="Edvar::Containers::Allocators::DefaultAllocator&lt;*&gt;">
+        <DisplayString>
+            buffer={DataPtr}
+        </DisplayString>
+
+        <Expand>
+            <Item Name="DataPtr">DataPtr</Item>
+        </Expand>
+    </Type>
+
+</AutoVisualizer>

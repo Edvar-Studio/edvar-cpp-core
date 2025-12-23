@@ -1,15 +1,12 @@
 #pragma once
 
-#include <cstdint>
-#include <type_traits>
-
 namespace Edvar::Containers {
 
 namespace _TuplePrivate {
-// Helper to get type at index
-template <uint32_t I, typename... Ts> struct TupleElementType;
+// Helper to get type at index (use signed index to allow I-1 without unsigned wrap)
+template <int32_t I, typename... Ts> struct TupleElementType;
 
-template <uint32_t I, typename Head, typename... Tail> struct TupleElementType<I, Head, Tail...> {
+template <int32_t I, typename Head, typename... Tail> struct TupleElementType<I, Head, Tail...> {
     using Type = typename TupleElementType<I - 1, Tail...>::Type;
 };
 
@@ -17,19 +14,19 @@ template <typename Head, typename... Tail> struct TupleElementType<0, Head, Tail
     using Type = Head;
 };
 
-template <uint32_t I, typename... Ts> using TupleElementTypeT = typename TupleElementType<I, Ts...>::Type;
+template <int32_t I, typename... Ts> using TupleElementTypeT = typename TupleElementType<I, Ts...>::Type;
 
 // Helper to get reference to element type at index
-template <uint32_t I, typename... Ts> struct TupleElementReference {
+template <int32_t I, typename... Ts> struct TupleElementReference {
     using Type = TupleElementTypeT<I, Ts...>&;
 };
 
-template <uint32_t I, typename... Ts> struct TupleElementConstReference {
+template <int32_t I, typename... Ts> struct TupleElementConstReference {
     using Type = const TupleElementTypeT<I, Ts...>&;
 };
 
-template <uint32_t I, typename... Ts> using TupleElementReferenceT = typename TupleElementReference<I, Ts...>::Type;
-template <uint32_t I, typename... Ts>
+template <int32_t I, typename... Ts> using TupleElementReferenceT = typename TupleElementReference<I, Ts...>::Type;
+template <int32_t I, typename... Ts>
 using TupleElementConstReferenceT = typename TupleElementConstReference<I, Ts...>::Type;
 
 // Helper to count tuple elements
@@ -45,13 +42,6 @@ template <typename Head, typename... Tail> struct TupleSize<Head, Tail...> {
 
 template <typename... Ts> constexpr uint32_t TupleSizeV = TupleSize<Ts...>::Value;
 
-// Index sequence helper
-template <uint32_t... Is> struct IndexSequence {};
-
-template <uint32_t N, uint32_t... Is> struct MakeIndexSequenceImpl : MakeIndexSequenceImpl<N - 1, N - 1, Is...> {};
-template <uint32_t... Is> struct MakeIndexSequenceImpl<0, Is...> : IndexSequence<Is...> {};
-template <uint32_t N> using MakeIndexSequence = typename MakeIndexSequenceImpl<N>::type;
-
 // Forward declaration
 template <typename... Ts> class TupleStorage;
 
@@ -61,9 +51,15 @@ public:
     TupleStorage() = default;
     ~TupleStorage() = default;
 
-    template <uint32_t I> auto& Get() { static_assert(I < 0, "Tuple index out of bounds"); }
+    template <int32_t I> void Get() {
+        static_assert(I < 0, "Tuple index out of bounds");
+        Platform::GetPlatform().OnFatalError(u"Tuple index out of bounds");
+    }
 
-    template <uint32_t I> const auto& Get() const { static_assert(I < 0, "Tuple index out of bounds"); }
+    template <int32_t I> void Get() const {
+        static_assert(I < 0, "Tuple index out of bounds");
+        Platform::GetPlatform().OnFatalError(u"Tuple index out of bounds");
+    }
 };
 
 // Recursive case: holds one element and delegates to the rest
@@ -84,28 +80,44 @@ public:
     ~TupleStorage() = default;
 
     // Get element at index 0 (head)
-    template <uint32_t I = 0> std::enable_if_t<I == 0, Head&> Get() { return head; }
+    template <int32_t I>
+    Head& Get()
+        requires(I == 0)
+    {
+        return head;
+    }
 
-    template <uint32_t I = 0> std::enable_if_t<I == 0, const Head&> Get() const { return head; }
+    template <int32_t I>
+    const Head& Get() const
+        requires(I == 0)
+    {
+        return head;
+    }
 
     // Get element at index > 0 (delegate to base)
-    template <uint32_t I> std::enable_if_t<(I > 0), TupleElementReferenceT<I - 1, Tail...>> Get() {
+    template <int32_t I>
+    auto Get() -> decltype(std::declval<BaseType>().template Get<I - 1>())
+        requires(I > 0)
+    {
         return BaseType::template Get<I - 1>();
     }
 
-    template <uint32_t I> std::enable_if_t<(I > 0), TupleElementConstReferenceT<I - 1, Tail...>> Get() const {
+    template <int32_t I>
+    auto Get() const -> decltype(std::declval<const BaseType>().template Get<I - 1>())
+        requires(I > 0)
+    {
         return BaseType::template Get<I - 1>();
     }
 
     // Helper to apply callable with all elements as arguments
     template <typename ReturnT, typename Func, uint32_t... Is>
-    ReturnT ApplyWithIndices(Func& func, IndexSequence<Is...>) {
-        return func(Get<Is>()...);
+    ReturnT ApplyWithIndices(Func& func, ::Edvar::Utils::IndexSequence<Is...>) {
+        return func(Get<static_cast<int32_t>(Is)>()...);
     }
 
     template <typename ReturnT, typename Func, uint32_t... Is>
-    ReturnT ApplyWithIndicesConst(Func& func, IndexSequence<Is...>) const {
-        return func(Get<Is>()...);
+    ReturnT ApplyWithIndicesConst(Func& func, ::Edvar::Utils::IndexSequence<Is...>) const {
+        return func(Get<static_cast<int32_t>(Is)>()...);
     }
 };
 
@@ -175,8 +187,10 @@ public:
      * @tparam I The index of the element to retrieve
      * @return Reference to the element at index I
      */
-    template <uint32_t I> _TuplePrivate::TupleElementTypeT<I, Ts...>& Get() {
-        static_assert(I < _TuplePrivate::TupleSizeV<Ts...>, "Tuple index out of bounds");
+    template <int32_t I>
+    auto Get() -> decltype(std::declval<BaseType>().template Get<I>())
+        requires(I < static_cast<int32_t>(_TuplePrivate::TupleSizeV<Ts...>))
+    {
         return BaseType::template Get<I>();
     }
 
@@ -185,8 +199,10 @@ public:
      * @tparam I The index of the element to retrieve
      * @return Const reference to the element at index I
      */
-    template <uint32_t I> const _TuplePrivate::TupleElementTypeT<I, Ts...>& Get() const {
-        static_assert(I < _TuplePrivate::TupleSizeV<Ts...>, "Tuple index out of bounds");
+    template <int32_t I>
+    auto Get() const -> decltype(std::declval<const BaseType>().template Get<I>())
+        requires(I < static_cast<int32_t>(_TuplePrivate::TupleSizeV<Ts...>))
+    {
         return BaseType::template Get<I>();
     }
 
@@ -212,7 +228,7 @@ public:
      *   t.Apply([](int i, double d, char c) { ... });
      */
     template <typename ReturnT, typename FuncT> ReturnT Apply(FuncT& func) {
-        return BaseType::ApplyWithIndices(func, _TuplePrivate::MakeIndexSequence<Size()>{});
+        return BaseType::ApplyWithIndices(func, Utils::MakeIndexSequence<Size()>{});
     }
 
     /**
@@ -221,7 +237,7 @@ public:
      * @param func The callable to invoke with all tuple elements as arguments
      */
     template <typename ReturnT, typename Func> void Apply(Func&& func) {
-        return BaseType::ApplyWithIndices(func, _TuplePrivate::MakeIndexSequence<Size()>{});
+        return BaseType::ApplyWithIndices(func, Utils::MakeIndexSequence<Size()>{});
     }
 
     /**
@@ -230,7 +246,7 @@ public:
      * @param func The callable to invoke with all tuple elements as arguments
      */
     template <typename ReturnT, typename Func> ReturnT Apply(Func& func) const {
-        return BaseType::ApplyWithIndicesConst(func, _TuplePrivate::MakeIndexSequence<Size()>{});
+        return BaseType::ApplyWithIndicesConst(func, Utils::MakeIndexSequence<Size()>{});
     }
 
     /**
@@ -239,19 +255,22 @@ public:
      * @param func The callable to invoke with all tuple elements as arguments
      */
     template <typename ReturnT, typename Func> ReturnT Apply(Func&& func) const {
-        return BaseType::ApplyWithIndicesConst(func, _TuplePrivate::MakeIndexSequence<Size()>{});
+        return BaseType::ApplyWithIndicesConst(func, Utils::MakeIndexSequence<Size()>{});
     }
 
     template <int FirstElementCount, typename... ArgsT> constexpr static bool StartsSame() {
-        if constexpr (FirstElementCount > Size() || FirstElementCount > sizeof...(ArgsT)) {
+        if constexpr (FirstElementCount > static_cast<int>(Size()) ||
+                      FirstElementCount > static_cast<int>(sizeof...(ArgsT))) {
             return false;
         } else {
             if constexpr (FirstElementCount == 0) {
                 return true;
             } else {
                 if constexpr (std::is_same_v<
-                                  _TuplePrivate::TupleElementTypeT<Size() - FirstElementCount, Ts...>,
-                                  _TuplePrivate::TupleElementTypeT<sizeof...(ArgsT) - FirstElementCount, ArgsT...>>) {
+                                  _TuplePrivate::TupleElementTypeT<static_cast<int32_t>(Size()) - FirstElementCount,
+                                                                   Ts...>,
+                                  _TuplePrivate::TupleElementTypeT<
+                                      static_cast<int32_t>(sizeof...(ArgsT)) - FirstElementCount, ArgsT...>>) {
                     return StartsSame<FirstElementCount - 1, ArgsT...>();
                 } else {
                     return false;
@@ -262,10 +281,13 @@ public:
     }
 };
 
+template<typename... Ts> requires (sizeof...(Ts) <= 0) Tuple<Ts...> MakeTuple() {return Tuple<Ts...>();}
+
 // Helper function to create a tuple from arguments
-template <typename... Ts> Tuple<Ts...> MakeTuple(const Ts&... values) { return Tuple<Ts...>(values...); }
+template <typename... Ts> requires(sizeof...(Ts) > 0) Tuple<Ts...> MakeTuple(const Ts&... values) { return Tuple<Ts...>(values...); }
 
 // Helper function to create a tuple from rvalue arguments
-template <typename... Ts> Tuple<Ts...> MakeTuple(Ts&&... values) { return Tuple<Ts...>(static_cast<Ts&&>(values)...); }
+template <typename... Ts> requires(sizeof...(Ts) > 0) Tuple<Ts...> MakeTuple(Ts&&... values) { return Tuple<Ts...>(static_cast<Ts&&>(values)...); }
 
+template <int32_t I, typename... Ts> using TupleElementT = _TuplePrivate::TupleElementTypeT<I, Ts...>;
 } // namespace Edvar::Containers

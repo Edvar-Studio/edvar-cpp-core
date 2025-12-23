@@ -18,7 +18,7 @@ private:
         FuncT func;
         CallableImpl(FuncT&& f) : func(std::forward<FuncT>(f)) {}
         RetT Invoke(ArgsT... args) override { return func(std::forward<ArgsT>(args)...); }
-        ICallable* Clone() const override { return new CallableImpl<FuncT>(func); }
+        ICallable* Clone() const override { return new CallableImpl<FuncT>(*this); }
     };
     ICallable* callable = nullptr;
 
@@ -38,10 +38,11 @@ public:
     explicit Function(FuncT&& func) : callable(new CallableImpl<std::decay_t<FuncT>>(std::forward<FuncT>(func))) {}
 
     [[nodiscard]] bool IsValid() const { return callable != nullptr; }
-    void Invoke(ArgsT... args) const {
+    RetT Invoke(ArgsT... args) const {
         if (callable != nullptr) {
-            callable->Invoke(std::forward<ArgsT>(args)...);
+            return callable->Invoke(std::forward<ArgsT>(args)...);
         }
+        InvalidInvocation();
     }
     operator bool() const { return IsValid(); }
     RetT operator()(ArgsT... args) const { return Invoke(std::forward<ArgsT>(args)...); }
@@ -60,6 +61,9 @@ public:
         }
         return *this;
     }
+
+private:
+    [[noreturn]] static void InvalidInvocation() { Platform::GetPlatform().OnFatalError(u"Invalid invocation of Function."); }
 };
 
 template <typename Signature> struct FunctionRef;
@@ -176,7 +180,7 @@ public:
         if (binding != nullptr) {
             return binding->Invoke(std::forward<ArgsT>(args)...);
         }
-        Platform::Get().OnFatalError(u"Delegate: Attempted to invoke an invalid delegate.");
+        Platform::GetPlatform().OnFatalError(u"Delegate: Attempted to invoke an invalid delegate.");
         // Make sure compile is happy about this.
         return RetT();
     }
@@ -295,7 +299,7 @@ public:
 
     void Clear() { Delegates.Resize(0); }
 
-    void Broadcast(ArgsT... args){
+    void Broadcast(ArgsT... args) {
         for (int32_t i = 0; i < Delegates.Length(); ++i) {
             DelegateData& delegate = Delegates[i];
             delegate.DelegateInstance.Invoke(std::forward<ArgsT>(args)...);

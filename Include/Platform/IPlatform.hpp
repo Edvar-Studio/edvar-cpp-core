@@ -20,7 +20,7 @@ public:
     virtual ~IPlatform() = default;
 
     virtual void Abort();
-    virtual void OnFatalError(const char16_t* message);
+    [[noreturn]] virtual void OnFatalError(const char16_t* message);
     virtual void PrintMessageToDebugger(const char16_t* message);
 
     [[nodiscard]] virtual IPlatformThreading& GetThreading() const = 0;
@@ -30,5 +30,5 @@ public:
     [[nodiscard]] virtual const char* GetName() const = 0;
 };
 
-EDVAR_CPP_CORE_API IPlatform& Get();
+EDVAR_CPP_CORE_API IPlatform& GetPlatform();
 } // namespace Edvar::Platform

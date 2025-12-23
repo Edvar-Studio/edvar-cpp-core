@@ -1,29 +1,26 @@
 #include "Windowing/Window.hpp"
 #include "Platform/IPlatform.hpp"
-#include "Rendering/IRenderDevice.hpp"
-#include "Rendering/ISwapchain.hpp"
-#include "Rendering/ResourceDataFormat.hpp"
+#include "Renderer/RHI/IRenderDevice.hpp"
+#include "Renderer/RHI/ISwapchain.hpp"
+#include "Renderer/RHI/ResourceDataFormat.hpp"
 
 namespace Edvar::Windowing {
 
 Window::Window(const WindowDescriptor& descriptor) {
-    Platform::Get().PrintMessageToDebugger(*String::PrintF(u"Sending request to create window: %s", *descriptor.Title));
-    implementation = &Platform::Get().GetWindowing().CreateWindow(descriptor);
-    Platform::Get().PrintMessageToDebugger(
-        *String::PrintF(u"Window created with implementation handle: %p", implementation));
-    Platform::Get().PrintMessageToDebugger(
-        *String::PrintF(u"Now initializing rendering for window: %s", *descriptor.Title));
-    InitializeRendering();
+    Platform::GetPlatform().PrintMessageToDebugger(
+        *String::Format(u"Sending request to create window: {}", *descriptor.Title));
+    implementation = &Platform::GetPlatform().GetWindowing().CreateWindow(descriptor);
+    Platform::GetPlatform().PrintMessageToDebugger(
+        *String::Format(u"Window created with implementation handle: {}", implementation));
+    Platform::GetPlatform().PrintMessageToDebugger(
+        *String::Format(u"Now initializing rendering for window: {}", *descriptor.Title));
 }
 
-Window::Window() {
-    implementation = &Platform::Get().GetWindowing().CreateWindow(WindowDescriptor());
-    InitializeRendering();
-}
+Window::Window() { implementation = &Platform::GetPlatform().GetWindowing().CreateWindow(WindowDescriptor()); }
 
 Window::~Window() {
     if (implementation) {
-        Platform::Get().GetWindowing().DestroyWindow(*implementation);
+        Platform::GetPlatform().GetWindowing().DestroyWindow(*implementation);
         implementation = nullptr;
     }
     if (swapchain) {
@@ -37,7 +34,7 @@ Window& Window::operator=(Window&& other) noexcept {
     if (this != &other) {
         // Destroy current window if any
         if (implementation) {
-            Platform::Get().GetWindowing().DestroyWindow(*implementation);
+            Platform::GetPlatform().GetWindowing().DestroyWindow(*implementation);
         }
 
         // Take ownership of other's window
@@ -151,13 +148,14 @@ void Window::TryClose(int32_t priorityLevel) {
         OnClose(INT32_MAX);
     }
 }
+SharedPointer<Renderer::RHI::ISwapchain> Window::GetSwapchain() const { return swapchain; }
 
-void Window::OnClose(int32_t priorityLevel) { Platform::Get().GetWindowing().DestroyWindow(*implementation); }
+void Window::OnClose(int32_t priorityLevel) { Platform::GetPlatform().GetWindowing().DestroyWindow(*implementation); }
 void Window::OnDestroyed() { implementation = nullptr; }
 void Window::HandleResized(Math::Vector2<int32_t> newSize) {
     if (swapchain) {
         swapchain->SetFullscreen(GetMode() == WindowMode::Fullscreen, newSize);
-        swapchain->Resize(newSize, 2, Rendering::ResourceDataFormat::B8G8R8A8_UNorm_SRGB);
+        swapchain->Resize(newSize, 2, Renderer::RHI::ResourceDataFormat::B8G8R8A8_UNorm_SRGB);
     }
 }
 void Window::HandleMoved(Math::Vector2<int32_t> newPosition) {}
@@ -179,8 +177,9 @@ void Window::HandleMouseMove(Platform::MouseMoveEventArgs& args) {}
 void Window::HandleMouseWheel(Platform::MouseWheelEventArgs& args) {}
 void Window::HandleTextInput(Platform::TextInputEventArgs& args) {}
 void Window::InitializeRendering() {
-    swapchain = Rendering::IRenderingAPI::GetActiveAPI()->GetPrimaryDevice()->CreateSwapchain(
-        *this, Rendering::ResourceDataFormat::B8G8R8A8_UNorm_SRGB);
+    swapchain = Renderer::RHI::IRenderingAPI::GetActiveAPI()->GetPrimaryDevice()->CreateSwapchain(
+        *this, Renderer::RHI::ResourceDataFormat::B8G8R8A8_UNorm);
+    swapchain->SetBackgroundColor(Math::Color::Black);
     if (IsUsingHDRWhenPossible()) {
         GetSwapchain()->SetHDRMode(useHDRWhenPossible);
     }

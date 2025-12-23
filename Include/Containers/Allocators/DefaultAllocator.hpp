@@ -40,6 +40,8 @@ public:
             printf("Allocator %d: Moving allocator from allocator %d\n", AllocatorId, other.AllocatorId);
             AllocatorId = other.AllocatorId;
 #endif
+            DataPtr = other.DataPtr;
+            AllocatedSize = other.AllocatedSize;
             other.DataPtr = nullptr;
             other.AllocatedSize = 0;
         }
@@ -70,7 +72,7 @@ public:
                 DataPtr[i].~T();
             }
         }
-        ::operator delete(DataPtr);
+        ::operator delete(DataPtr, Alignment);
         DataPtr = NewDataPtr;
         AllocatedSize = NewCount;
     }
@@ -91,7 +93,6 @@ public:
 
     ~DefaultAllocator() {
 #if EDVAR_CPP_CORE_ALLOCATOR_TRACING_ENABLED
-        __debugbreak();
         printf("Allocator %d: Destroying allocator\n", AllocatorId);
 #endif
         ::operator delete(DataPtr, Alignment);

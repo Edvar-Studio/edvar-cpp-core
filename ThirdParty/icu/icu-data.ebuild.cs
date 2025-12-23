@@ -225,9 +225,14 @@ public class IcuData : ModuleBase
                     "-s",
                     Path.Join(context.ModuleDirectory.FullName, "temp", "pack_contents"),
                     "-p",
-                    "icudt77",
+                    $"icudt77{(BitConverter.IsLittleEndian ? "l" : "b")}", // this is the internal name of what we want to save this as. This should match the
+                    // #define U_ICUDATA_NAME    "icudt" U_ICU_VERSION_SHORT U_ICUDATA_TYPE_LETTER
+                    // definition in the icu headers.
+                    // We are currently hardcording the version of the library to 77 since TEngine requires this version of ICU.
                     "-T",
                     Path.Join(context.ModuleDirectory.FullName, "temp", "packaging_temp"),
+                    "-e",
+                    "icudt77",
                     "-L",
                     "icudt77",
                 ];

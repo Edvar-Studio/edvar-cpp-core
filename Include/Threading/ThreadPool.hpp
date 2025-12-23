@@ -10,7 +10,7 @@ public:
         : taskReadySemaphore(0, maxThreads), maxThreadCount(maxThreads), poolName(name) {
         workerThreads = new Platform::IThreadImplementation*[maxThreadCount];
         for (int32_t i = 0; i < maxThreadCount; ++i) {
-            Containers::String threadName = name + u"_Worker_" + Containers::String::PrintF(u"%d", i);
+            Containers::String threadName = name + u"_Worker_" + Containers::String::Format(u"{}", i);
             workerThreads[i] = (&Platform::Get().GetThreading().CreateThread(threadName, WorkerThreadFunction, this));
             workerThreads[i]->OnThreadCrashed.AddShared(this, &ThreadPool::OnThreadCrashed);
         }

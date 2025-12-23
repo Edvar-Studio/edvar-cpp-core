@@ -475,7 +475,7 @@ public class Mimalloc : ModuleBase
             var redirectLibPath = Path.Join(redirectLibDir, redirectLibFileName);
             Libraries.Private.Add(redirectLibPath + ".lib");
             // we need the redirect Dll next to the runtime dependencies.
-            AdditionalDependencies.Public.Add(new AdditionalDependency(redirectLibPath + ".lib", $"${{RuntimeDir}}/{redirectLibFileName}.dll"));
+            AdditionalDependencies.Public.Add(new AdditionalDependency(redirectLibPath + ".lib", $"$(RuntimeDir)/{redirectLibFileName}.dll"));
         }
     }
 }
